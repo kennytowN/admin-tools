@@ -1,4 +1,4 @@
-script_version('0.1.7')
+script_version('0.1.8-beta')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -67,6 +67,8 @@ local mainIni = inicfg.load({
 	settings = {
 		autoAduty = false,
 		autologin = false,
+		offReconAlert = true,
+		ckOffAsk = false,
 		password = ""
 	},
 
@@ -103,7 +105,6 @@ function main()
 
 	-- Fix reload the script
 	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	print(sampGetPlayerColor(id))
 
 	if sampGetPlayerColor(id) == 16510045 then 
 		pInfo.aduty = true 
@@ -302,8 +303,14 @@ function main()
 			end
 
 			if nextplayer then 
-				wait(1500)
-				nextplayer = false
+				local result, ped = sampGetCharHandleBySampPlayerId(rInfo.id)
+
+				if not result then
+					wait(400)
+				else
+					wait(200)
+					nextplayer = false
+				end
 			else
 				if rInfo.id ~= -1 and rInfo.state then
 					local _, ped = sampGetCharHandleBySampPlayerId(rInfo.id)
@@ -448,6 +455,8 @@ function imgui_init()
 	ckWallhack = imgui.ImBool(mainIni.functions.wallhack)
 	ckTraicers = imgui.ImBool(mainIni.functions.traicers)
 	ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
+	ckOffReconAlert = imgui.ImBool(mainIni.settings.offReconAlert)
+	ckOffAsk = imgui.ImBool(mainIni.settings.ckOffAsk)
 	ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
 
 	temp_buffers = {
@@ -604,8 +613,8 @@ function imgui_init()
 				wInfo.main = false
 				wInfo.stats = true
 			elseif imgui.Button(u8'Телепорт-лист',imgui.ImVec2(310,25)) then 
-				wInfo.func = false
 				wInfo.teleport = true
+				wInfo.main = false
 			elseif imgui.Button(u8'О скрипте',imgui.ImVec2(310,25)) then 
 				wInfo.main = false
 				wInfo.info = true
@@ -616,7 +625,7 @@ function imgui_init()
 			local _, playerid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 
 			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-			imgui.Begin(string.format(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ %s', sampGetPlayerNickname(playerid)), wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+			imgui.Begin(string.format(u8'Статистика %s', sampGetPlayerNickname(playerid)), wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
 			imgui.Text(string.format(u8"Текущая сессия: %s", secToTime(pInfo.session_time)))
 			imgui.Text(string.format(u8"Реальный онлайн: %s", secToTime(mainIni.dayOnline.real)))
@@ -690,6 +699,22 @@ function imgui_init()
 
 			if imgui.Checkbox(u8'Авто /aduty', ckAutoAduty) then
 				mainIni.settings.autoAduty = ckAutoAduty.v
+				inicfg.save(mainIni, "admintools.ini")
+			end
+
+			imgui.TextQuestion(u8"Убирает строку о начале слежки за игроком от другого администратора")
+			imgui.SameLine()
+
+			if imgui.Checkbox(u8'Отключение оповещения о начале слежки', ckOffReconAlert) then
+				mainIni.settings.offReconAlert = ckOffReconAlert.value
+				inicfg.save(mainIni, "admintools.ini")
+			end
+
+			imgui.TextQuestion(u8"Визуально отключает вопросы от игроков")
+			imgui.SameLine()
+
+			if imgui.Checkbox(u8'Отключение вопросов от игроков', ckOffAsk) then
+				mainIni.settings.OffAsk = ckOffAsk.value
 				inicfg.save(mainIni, "admintools.ini")
 			end
 
@@ -876,7 +901,9 @@ function sampev.onSendCommand(cmd)
 	if not reId then reId = string.match(cmd, "^%/sp (%d+)") end
 
 	if reId and sampIsPlayerConnected(reId) and sampGetPlayerColor(reId) ~= 16510045 then
-		if rInfo.state then nextplayer = true end
+		if rInfo.id then 
+			nextplayer = true 
+		end
 
 		rInfo.state = false
 		rInfo.id = tonumber(reId)
@@ -892,7 +919,7 @@ function sampev.onSendCommand(cmd)
 		rInfo.id = -1
 		wInfo.spectatemenu = false
 		
-		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info then
+		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
 			imgui.Process = false
 			imgui.ShowCursor = false
 		end
@@ -901,7 +928,7 @@ end
 
 function sampev.onSpectatePlayer(playerid, camtype)
     rInfo.state = true
-    --rInfo.id = tonumber(playerid)
+    rInfo.id = tonumber(playerid)
 	rInfo.lastCar = -1
 end
 function sampev.onSpectateVehicle(carid, camtype)
@@ -917,9 +944,16 @@ end
 function sampev.onServerMessage(color, text)
     local _, playerid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 
+	if text:find("начал слежку за") then 
+		if text:find(sampGetPlayerNickname(playerid)) or mainIni.settings.offReconAlert then 
+			return false
+		end
+	elseif text:find("Вопрос от") and mainIni.settings.OffAsk then
+		return false
+	end
+
 	if text:find(sampGetPlayerNickname(playerid)) then
-		if text:find("начал слежку за") then return false
-		elseif text:find("начал дежурство") then 
+		if text:find("начал дежурство") then 
 			pInfo.aduty = true 
 			setCharProofs(playerPed, true, true, true, true, true)
 			writeMemory(0x96916E, 1, 1, false)
@@ -949,7 +983,7 @@ function sampev.onServerMessage(color, text)
 		rInfo.id = -1
 		wInfo.spectatemenu = false
 		
-		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info then
+		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
 			imgui.Process = false
 		end
 	elseif text:find("Вы не можете следить за администратором") or text:find("Данный игрок не авторизован") then
@@ -969,7 +1003,7 @@ function sampev.onSendClickTextDraw(textdrawId)
 		rInfo.id = -1
 		wInfo.spectatemenu = false
 		
-		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info then
+		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
 			imgui.Process = false
 			imgui.ShowCursor = false
 		end
