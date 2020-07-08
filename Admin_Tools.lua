@@ -1,4 +1,4 @@
-script_version('0.1.9')
+script_version('0.1.9-R2')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -598,6 +598,8 @@ function imgui_init()
 			elseif imgui.Button(u8'О скрипте',imgui.ImVec2(310,25)) then 
 				wInfo.main = false
 				wInfo.info = true
+			elseif imgui.Button(u8'Проверить обновления', imgui.ImVec2(310, 25)) then
+				autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", '['..string.upper(thisScript().name)..']: ', "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
 			end
 
 			imgui.End()
@@ -630,7 +632,7 @@ function imgui_init()
 			imgui.SetCursorPosX((imgui.GetWindowWidth() - 70) / 2)
 			imgui.Text(u8'Автор: taichi')
 			imgui.SetCursorPosX((imgui.GetWindowWidth() - 100) / 2)
-			imgui.Text(u8'Текущая версия скрипта: 1.6')
+			imgui.Text(u8'Текущая версия скрипта: ' .. thisScript().version)
 			if imgui.Button(u8'Назад',imgui.ImVec2(310,25)) then
 				wInfo.info = false
 				wInfo.main = true
