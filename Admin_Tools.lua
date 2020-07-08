@@ -1,4 +1,4 @@
-script_version('0.1.8-beta')
+script_version('0.1.7')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -900,18 +900,22 @@ function sampev.onSendCommand(cmd)
 	local reId = string.match(cmd, "^%/re (%d+)")
 	if not reId then reId = string.match(cmd, "^%/sp (%d+)") end
 
-	if reId and sampIsPlayerConnected(reId) and sampGetPlayerColor(reId) ~= 16510045 then
-		if rInfo.id then 
-			nextplayer = true 
+	if reId then
+		local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+
+		if sampIsPlayerConnected(reId) and sampGetPlayerColor(reId) ~= 16510045 and reId ~= id and sampGetPlayerScore(reId) ~= 0 then
+			if rInfo.id then 
+				nextplayer = true 
+			end
+
+			rInfo.state = false
+			rInfo.id = tonumber(reId)
+			saveId = reId
+			rInfo.lastCar = -1
+
+			wInfo.spectatemenu = true
+			imgui.Process = true
 		end
-
-		rInfo.state = false
-		rInfo.id = tonumber(reId)
-		saveId = reId
-		rInfo.lastCar = -1
-
-		wInfo.spectatemenu = true
-		imgui.Process = true
 	end
 	
     if cmd:find("/re off") or cmd:find("/sp off") then
