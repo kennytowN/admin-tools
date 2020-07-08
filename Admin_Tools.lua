@@ -1,4 +1,4 @@
-script_version('0.1.9-R2')
+script_version('0.1.9-R3')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -945,8 +945,8 @@ function sampev.onSendCommand(cmd)
 	local reId = string.match(cmd, "^%/re (%d+)")
 	if not reId then reId = string.match(cmd, "^%/sp (%d+)") end
 
-	if reId then
-		if sampGetPlayerColor(reId) ~= 16510045 and sampIsPlayerConnected(reId) and sampGetPlayerScore(reId) == 1 then
+	if reId and sampIsPlayerConnected(reId) and sampGetPlayerScore(reId) == 1 then
+		if sampGetPlayerColor(reId) ~= 16510045 then
 			saveId = reId
 		end
 
