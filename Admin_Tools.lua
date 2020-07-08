@@ -389,14 +389,14 @@ end
 function r_smart_lib_imgui()
     if not pcall(function() imgui = require 'imgui' end) then
       	waiter = true
-      	local prefix = "[Admin Tools]: "
+      	local prefix = "[Admin Tools]:{FFFFFF} "
       	local color = 0xffa500
       	sampAddChatMessage(prefix.."Модуль Dear ImGui загружен неудачно. Для работы скрипта этот модуль обязателен.", color)
 		sampAddChatMessage(prefix.."Запускаю средство автоматического исправления ошибок.", color)
 		
         local imguifiles = {
-          [getGameDirectory().."\\moonloader\\lib\\imgui.lua"] = "http://qrlk.me/dev/moonloader/lib/imgui.lua",
-          [getGameDirectory().."\\moonloader\\lib\\MoonImGui.dll"] = "http://qrlk.me/dev/moonloader/lib/MoonImGui.dll"
+          [getGameDirectory().."\\moonloader\\lib\\imgui.lua"] = "https://raw.githubusercontent.com/kennytowN/admin-tools/master/libs/imgui.lua",
+          [getGameDirectory().."\\moonloader\\lib\\MoonImGui.dll"] = "https://github.com/kennytowN/admin-tools/raw/master/libs/MoonImGui.dll"
         }
         createDirectory(getGameDirectory().."\\moonloader\\lib\\")
         for k, v in pairs(imguifiles) do
@@ -427,8 +427,7 @@ function r_smart_lib_imgui()
           waiter = false
           waitforreload = true
         else
-          sampAddChatMessage(prefix.."Модуль Dear ImGui загружен неудачно!", color)
-          sampAddChatMessage(prefix.."Обратитесь в поддержку скрипта (vk.me/qrlk.mods), приложив файл moonloader.log", color)
+          sampAddChatMessage(prefix.."Модуль Dear ImGui загружен неудачно, обратитесь к автору скрипта!", color)
           print(err)
           for k, v in pairs(imguifiles) do
             print(k.." - "..tostring(doesFileExist(k)).." from "..v)
