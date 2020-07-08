@@ -94,6 +94,8 @@ function main()
 	while not isSampAvailable() do wait(200) end
 	while not sampIsLocalPlayerSpawned() do wait(1) end
 
+	autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", '['..string.upper(thisScript().name)..']: ', "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
+
 	-- Reconnect
 	sampRegisterChatCommand("rec", reconnect)
 
@@ -119,7 +121,7 @@ function main()
 		imgui_init()
 		initializeRender()
 
-		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен, приятного использования.", 0xffa500)
+		sampAddChatMessage("[Admin Tools]:{FFFFFF} пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.", 0xffa500)
 
 		while true do
 			if isKeyJustPressed(key.VK_F9) then
@@ -387,8 +389,8 @@ function r_smart_lib_imgui()
       	waiter = true
       	local prefix = "[Admin Tools]:{FFFFFF} "
       	local color = 0xffa500
-      	sampAddChatMessage(prefix.."Модуль Dear ImGui загружен неудачно. Для работы скрипта этот модуль обязателен.", color)
-		sampAddChatMessage(prefix.."Запускаю средство автоматического исправления ошибок.", color)
+      	sampAddChatMessage(prefix.."пїЅпїЅпїЅпїЅпїЅпїЅ Dear ImGui пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.", color)
+		sampAddChatMessage(prefix.."пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ.", color)
 		
         local imguifiles = {
           [getGameDirectory().."\\moonloader\\lib\\imgui.lua"] = "http://qrlk.me/dev/moonloader/lib/imgui.lua",
@@ -397,34 +399,34 @@ function r_smart_lib_imgui()
         createDirectory(getGameDirectory().."\\moonloader\\lib\\")
         for k, v in pairs(imguifiles) do
           if doesFileExist(k) then
-            sampAddChatMessage(prefix.."Файл "..k.." найден.", color)
-            sampAddChatMessage(prefix.."Удаляю "..k.." и скачиваю последнюю доступную версию.", color)
+            sampAddChatMessage(prefix.."пїЅпїЅпїЅпїЅ "..k.." пїЅпїЅпїЅпїЅпїЅпїЅ.", color)
+            sampAddChatMessage(prefix.."пїЅпїЅпїЅпїЅпїЅпїЅ "..k.." пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ.", color)
             os.remove(k)
           else
-            sampAddChatMessage(prefix.."Файл "..k.." не найден.", color)
+            sampAddChatMessage(prefix.."пїЅпїЅпїЅпїЅ "..k.." пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ.", color)
           end
-          sampAddChatMessage(prefix.."Ссылка: "..v..". Пробую скачать.", color)
+          sampAddChatMessage(prefix.."пїЅпїЅпїЅпїЅпїЅпїЅ: "..v..". пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ.", color)
           pass = false
           wait(1500)
           downloadUrlToFile(v, k,
             function(id, status, p1, p2)
               if status == 58 then
-                sampAddChatMessage(prefix..k..' - Загрузка завершена.', color)
+                sampAddChatMessage(prefix..k..' - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.', color)
                 pass = true
               end
             end
           )
           while pass == false do wait(1) end
         end
-        sampAddChatMessage(prefix.."Кажется, все файлы загружены. Попробую запустить модуль Dear ImGui ещё раз.", color)
+        sampAddChatMessage(prefix.."пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ Dear ImGui пїЅпїЅпїЅ пїЅпїЅпїЅ.", color)
         local status, err = pcall(function() imgui = require 'imgui' end)
         if status then
-          sampAddChatMessage(prefix.."Модуль Dear ImGui успешно загружен!", color)
+          sampAddChatMessage(prefix.."пїЅпїЅпїЅпїЅпїЅпїЅ Dear ImGui пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ!", color)
           waiter = false
           waitforreload = true
         else
-          sampAddChatMessage(prefix.."Модуль Dear ImGui загружен неудачно!", color)
-          sampAddChatMessage(prefix.."Обратитесь в поддержку скрипта (vk.me/qrlk.mods), приложив файл moonloader.log", color)
+          sampAddChatMessage(prefix.."пїЅпїЅпїЅпїЅпїЅпїЅ Dear ImGui пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ!", color)
+          sampAddChatMessage(prefix.."пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (vk.me/qrlk.mods), пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ moonloader.log", color)
           print(err)
           for k, v in pairs(imguifiles) do
             print(k.." - "..tostring(doesFileExist(k)).." from "..v)
@@ -443,12 +445,12 @@ end
 
 function imgui_init()
 	local script_changelog = [[
-		В версии 1.6 исправлен баг когда скрипт ошибочно пытался 
-		следить за администратором и зависала панель слежки, отныне 
-		такого нет и написан нормальный цикл на поиск игрока, который 
-		авторизован и не является администратором. Меню слежки теперь 
-		работает при двух командах: /re и /sp, а также при нажатии на 
-		текстдрав "Exit" скрывается нормально, чего раньше не было.
+		пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ 1.6 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ 
+		пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅ 
+		пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅ 
+		пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ 
+		пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: /re пїЅ /sp, пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ 
+		пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ "Exit" пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅ.
 	]]
 
 	changelog = imgui.ImBuffer(65536)
@@ -533,7 +535,7 @@ function imgui_init()
 
 				if imgui.Button(u8'Next') then
 					if rInfo.id == sampGetMaxPlayerId(false) then
-						sampAddChatMessage("[Admin Tools]:{FFFFFF} Следующего игрока не существует.", 0xffa500)
+						sampAddChatMessage("[Admin Tools]:{FFFFFF} пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.", 0xffa500)
 					else 
 						for i = rInfo.id, sampGetMaxPlayerId(false) do
 							if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= rInfo.id then
@@ -547,7 +549,7 @@ function imgui_init()
 
 				if imgui.Button(u8'Previous') then
 					if rInfo.id == 0 then
-						sampAddChatMessage("[Admin Tools]:{FFFFFF} Предыдущего игрока не существует.", 0xffa500)
+						sampAddChatMessage("[Admin Tools]:{FFFFFF} пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.", 0xffa500)
 					else 
 						for i = rInfo.id, 0, -1 do
 							if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= rInfo.id then
@@ -564,13 +566,13 @@ function imgui_init()
 				end
 				imgui.SameLine()
 				
-				if imgui.Button(u8'Вы тут?') then
-					sampSendChat(string.format("/ans %d Вы тут? Ответ в /b.", rInfo.id))
+				if imgui.Button(u8'пїЅпїЅ пїЅпїЅпїЅ?') then
+					sampSendChat(string.format("/ans %d пїЅпїЅ пїЅпїЅпїЅ? пїЅпїЅпїЅпїЅпїЅ пїЅ /b.", rInfo.id))
 				end
 				imgui.SameLine()
 				
-				if imgui.Button(u8'Не прыгайте') then
-					sampSendChat(string.format("/ans %d Не прыгайте.", rInfo.id))
+				if imgui.Button(u8'пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ') then
+					sampSendChat(string.format("/ans %d пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.", rInfo.id))
 				end
 
 				if imgui.Button(u8'/aheal') then
@@ -596,7 +598,7 @@ function imgui_init()
 					end
 				end
 			else
-				imgui.Text(u8'Загрузка...')
+				imgui.Text(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ...')
 			end
 
 			imgui.End()
@@ -606,16 +608,16 @@ function imgui_init()
 			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 			imgui.Begin(u8'Admin tools', wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
-			if imgui.Button(u8'Функции',imgui.ImVec2(310,25)) then
+			if imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅ',imgui.ImVec2(310,25)) then
 				wInfo.main = false
 				wInfo.func = true
-			elseif imgui.Button(u8'Статистика',imgui.ImVec2(310,25)) then 
+			elseif imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ',imgui.ImVec2(310,25)) then 
 				wInfo.main = false
 				wInfo.stats = true
-			elseif imgui.Button(u8'Телепорт-меню',imgui.ImVec2(310,25)) then 
+			elseif imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ-пїЅпїЅпїЅпїЅ',imgui.ImVec2(310,25)) then 
 				wInfo.func = false
 				wInfo.teleport = true
-			elseif imgui.Button(u8'Информация',imgui.ImVec2(310,25)) then 
+			elseif imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ',imgui.ImVec2(310,25)) then 
 				wInfo.main = false
 				wInfo.info = true
 			end
@@ -625,17 +627,17 @@ function imgui_init()
 			local _, playerid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 
 			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-			imgui.Begin(string.format(u8'Статистика %s', sampGetPlayerNickname(playerid)), wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+			imgui.Begin(string.format(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ %s', sampGetPlayerNickname(playerid)), wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
-			imgui.Text(string.format(u8"Текущая сессия: %s", secToTime(pInfo.session_time)))
-			imgui.Text(string.format(u8"Реальный онлайн за день: %s", secToTime(mainIni.dayOnline.real)))
-			imgui.Text(string.format(u8"Проведено времени в AFK: %s", secToTime(mainIni.dayOnline.afk)))
+			imgui.Text(string.format(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ: %s", secToTime(pInfo.session_time)))
+			imgui.Text(string.format(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅ: %s", secToTime(mainIni.dayOnline.real)))
+			imgui.Text(string.format(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ AFK: %s", secToTime(mainIni.dayOnline.afk)))
 
-			imgui.Text(string.format(u8"Выдано блокировок чата: %d", mainIni.punishments.mute))
-			imgui.Text(string.format(u8"Посажено игроков: %d", mainIni.punishments.jail))
-			imgui.Text(string.format(u8"Кикнуто игроков: %d", mainIni.punishments.kick))
+			imgui.Text(string.format(u8"пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ: %d", mainIni.punishments.mute))
+			imgui.Text(string.format(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: %d", mainIni.punishments.jail))
+			imgui.Text(string.format(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: %d", mainIni.punishments.kick))
 
-			if imgui.Button(u8'Назад',imgui.ImVec2(250,25)) then
+			if imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅ',imgui.ImVec2(250,25)) then
 				wInfo.stats = false
 				wInfo.main = true
 			end
@@ -643,27 +645,27 @@ function imgui_init()
 			imgui.End()	
 		elseif wInfo.info then
 			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2 , ScreenY / 2), imgui.Cond.FirsUseEver, imgui.ImVec2(0.5, 0.5))
-			imgui.Begin(u8"Информация о скрипте", wInfo.info, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
-			if imgui.Button(u8'Связаться с автором',imgui.ImVec2(310,25)) then
+			imgui.Begin(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ", wInfo.info, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+			if imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ',imgui.ImVec2(310,25)) then
 				os.execute('start https://vk.com/unknownus3r')
 			end
 			imgui.SetCursorPosX((imgui.GetWindowWidth() - 70) / 2)
-			imgui.Text(u8'Автор: taichi')
+			imgui.Text(u8'пїЅпїЅпїЅпїЅпїЅ: taichi')
 			imgui.SetCursorPosX((imgui.GetWindowWidth() - 100) / 2)
-			imgui.Text(u8'Версия скрипта: 1.6')
-			if imgui.Button(u8'Назад',imgui.ImVec2(310,25)) then
+			imgui.Text(u8'пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: 1.6')
+			if imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅ',imgui.ImVec2(310,25)) then
 				wInfo.info = false
 				wInfo.main = true
 			end
 			imgui.End()
 		elseif wInfo.func then
 			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2 , ScreenY / 2), imgui.Cond.FirsUseEver, imgui.ImVec2(0.5, 0.5))
-			imgui.Begin(u8"Функции", wInfo.info, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+			imgui.Begin(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅ", wInfo.info, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
-			imgui.TextQuestion(u8"Автоматический ввод пароля при заходе на сервер")
+			imgui.TextQuestion(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ")
 			imgui.SameLine()
 			
-			if imgui.Checkbox(u8'Авто логин', ckAutoLogin) then
+			if imgui.Checkbox(u8'пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ', ckAutoLogin) then
 				mainIni.settings.autologin = ckAutoLogin.v
 				inicfg.save(mainIni, "admintools.ini")
 			end
@@ -678,7 +680,7 @@ function imgui_init()
 					end
 
 					imgui.SameLine()
-					if imgui.Button(u8"Скрыть пароль") then
+					if imgui.Button(u8"пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ") then
 						pInfo.showpass = not pInfo.showpass
 					end
 				else
@@ -688,21 +690,21 @@ function imgui_init()
 					end
 
 					imgui.SameLine()
-					if imgui.Button(u8"Показать пароль") then
+					if imgui.Button(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ") then
 						pInfo.showpass = not pInfo.showpass
 					end
 				end
 			end
 
-			imgui.TextQuestion(u8"При входе в аккаунт автоматически входит в админку")
+			imgui.TextQuestion(u8"пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ")
 			imgui.SameLine()
 
-			if imgui.Checkbox(u8'Авто /aduty', ckAutoAduty) then
+			if imgui.Checkbox(u8'пїЅпїЅпїЅпїЅ /aduty', ckAutoAduty) then
 				mainIni.settings.autoAduty = ckAutoAduty.v
 				inicfg.save(mainIni, "admintools.ini")
 			end
 
-			imgui.TextQuestion(u8"Возможность видеть никнеймы других игроков сквозь стены")
+			imgui.TextQuestion(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")
 			imgui.SameLine()
 			
 			if imgui.Checkbox("Wall Hack", ckWallhack) then
@@ -711,22 +713,22 @@ function imgui_init()
 				if ckWallhack.v then nameTagOn() else nameTagOff() end
 			end
 		
-			imgui.TextQuestion(u8"Видны трейсеры пуль того игрока, за которым вы следите")
+			imgui.TextQuestion(u8"пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ")
 			imgui.SameLine()
 
-			if imgui.Checkbox(u8"Трейсеры пуль", ckTraicers) then 
+			if imgui.Checkbox(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ", ckTraicers) then 
 				mainIni.functions.traicers = ckTraicers.v 
 				inicfg.save(mainIni, "admintools.ini")
 			end
 
-			imgui.TextQuestion(u8"Простая очистка чата")
+			imgui.TextQuestion(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ")
 			imgui.SameLine()
 
-			if imgui.Button(u8'Очистить чат') then 
+			if imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ') then 
 				ClearChat() 
 			end
 
-			if imgui.Button(u8'Назад',imgui.ImVec2(490,25)) then
+			if imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅ',imgui.ImVec2(490,25)) then
 				wInfo.func = false
 				wInfo.main = true
 			end
@@ -735,25 +737,25 @@ function imgui_init()
 		elseif wInfo.teleport then
 			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 			imgui.SetNextWindowSize(imgui.ImVec2(300, 200), imgui.Cond.FirstUseEver)
-			imgui.Begin(u8'Телепорт меню', wInfo.teleport, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+			imgui.Begin(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ', wInfo.teleport, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
-			if imgui.BeginMenu(u8'Важные места') then
-				if imgui.MenuItem(u8'Мэрия') then teleportPlayer(1481.1948,-1742.2594,13.5469)
+			if imgui.BeginMenu(u8'пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ') then
+				if imgui.MenuItem(u8'пїЅпїЅпїЅпїЅпїЅ') then teleportPlayer(1481.1948,-1742.2594,13.5469)
 				elseif imgui.MenuItem(u8'Spawn') then teleportPlayer(1716.4712,-1900.9441,13.5662)
-				elseif imgui.MenuItem(u8'Банк') then teleportPlayer(591.5851,-1243.9316,17.9945)
-				elseif imgui.MenuItem(u8'Автосалон') then teleportPlayer(553.4409,-1284.4994,17.2482)
-				elseif imgui.MenuItem(u8'Мотосалон') then teleportPlayer(2128.8518,-1142.8802,24.9510)
-				elseif imgui.MenuItem(u8'Департамент транспорта') then teleportPlayer(738.8824,-1412.5363,13.5287)
-				elseif imgui.MenuItem(u8'Торговый центр Mall') then teleportPlayer(1136.7538,-1443.1121,15.7969) end
+				elseif imgui.MenuItem(u8'пїЅпїЅпїЅпїЅ') then teleportPlayer(591.5851,-1243.9316,17.9945)
+				elseif imgui.MenuItem(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ') then teleportPlayer(553.4409,-1284.4994,17.2482)
+				elseif imgui.MenuItem(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ') then teleportPlayer(2128.8518,-1142.8802,24.9510)
+				elseif imgui.MenuItem(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ') then teleportPlayer(738.8824,-1412.5363,13.5287)
+				elseif imgui.MenuItem(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ Mall') then teleportPlayer(1136.7538,-1443.1121,15.7969) end
 
 				imgui.EndMenu()
 			end
 
-			if imgui.BeginMenu(u8'Организации') then
-				if imgui.MenuItem(u8'Пресса') then teleportPlayer(644.4466,-1359.8496,13.5839)
+			if imgui.BeginMenu(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ') then
+				if imgui.MenuItem(u8'пїЅпїЅпїЅпїЅпїЅпїЅ') then teleportPlayer(644.4466,-1359.8496,13.5839)
 				elseif imgui.MenuItem(u8'LSFD') then teleportPlayer(1337.7219,-864.5389,39.3089)
 				elseif imgui.MenuItem(u8'LSPD') then teleportPlayer(1337.7219,-864.5389,39.3089)
-				elseif imgui.MenuItem(u8'54 станция') then teleportPlayer(1541.9823,-1674.7384,13.5536)
+				elseif imgui.MenuItem(u8'54 пїЅпїЅпїЅпїЅпїЅпїЅпїЅ') then teleportPlayer(1541.9823,-1674.7384,13.5536)
 				elseif imgui.MenuItem(u8'LSFD') then teleportPlayer(2317.1174,-1341.3965,24.0152)
 				elseif imgui.MenuItem(u8'LSSD') then teleportPlayer(633.9006,-571.9080,16.3359)
 				elseif imgui.MenuItem(u8'LSHS') then teleportPlayer(1813.4537,-1347.5161,15.0655) end
@@ -761,15 +763,15 @@ function imgui_init()
 				imgui.EndMenu()
 			end
 
-			if imgui.BeginMenu(u8'Города') then
-				if imgui.MenuItem(u8'Лос-Сантос') then teleportPlayer(1437.3413,-1358.1964,35.9609)
-				elseif imgui.MenuItem(u8'Сан-Фиерро') then teleportPlayer(-2088.7825,541.0121,79.1693)
-				elseif imgui.MenuItem(u8'Лас-Вентурас') then teleportPlayer(2028.8269,1371.3090,10.8130) end
+			if imgui.BeginMenu(u8'пїЅпїЅпїЅпїЅпїЅпїЅ') then
+				if imgui.MenuItem(u8'пїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅпїЅ') then teleportPlayer(1437.3413,-1358.1964,35.9609)
+				elseif imgui.MenuItem(u8'пїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅпїЅ') then teleportPlayer(-2088.7825,541.0121,79.1693)
+				elseif imgui.MenuItem(u8'пїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ') then teleportPlayer(2028.8269,1371.3090,10.8130) end
 
 				imgui.EndMenu()
 			end
 
-			if imgui.Button(u8'Назад',imgui.ImVec2(310,25)) then
+			if imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅ',imgui.ImVec2(310,25)) then
 				wInfo.teleport = false
 				wInfo.main = true
 			end
@@ -844,7 +846,7 @@ end
 
 -- RPC
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-	if dialogId ~= 65535 and title:find("Ввод пароля") and ckAutoLogin and mainIni.settings.password ~= "" then
+	if dialogId ~= 65535 and title:find("пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ") and ckAutoLogin and mainIni.settings.password ~= "" then
 		sampSendDialogResponse(dialogId, 1, -1, mainIni.settings.password)
 		return false
 	end
@@ -927,24 +929,24 @@ function sampev.onServerMessage(color, text)
     local _, playerid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 
 	if text:find(sampGetPlayerNickname(playerid)) then
-		if text:find("начал слежку за") then return false
-		elseif text:find("начал дежурство") then 
+		if text:find("пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ") then return false
+		elseif text:find("пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ") then 
 			pInfo.aduty = true 
 			setCharProofs(playerPed, true, true, true, true, true)
 			writeMemory(0x96916E, 1, 1, false)
-		elseif text:find("ушёл с дежурства.") then 
+		elseif text:find("пїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.") then 
 			pInfo.aduty = false 
-		elseif text:find("выдал бан OOC чата игроку") then
+		elseif text:find("пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ OOC пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ") then
 			mainIni.punishments.mute = mainIni.punishments.mute + 1
 			inicfg.save(mainIni, "admintools.ini")
-		elseif text:find("посадил") then
+		elseif text:find("пїЅпїЅпїЅпїЅпїЅпїЅпїЅ") then
 			mainIni.punishments.jail = mainIni.punishments.jail + 1
 			inicfg.save(mainIni, "admintools.ini")
-		elseif text:find("кикнул") then
+		elseif text:find("пїЅпїЅпїЅпїЅпїЅпїЅ") then
 			mainIni.punishments.kick = mainIni.punishments.kick + 1
  			inicfg.save(mainIni, "admintools.ini")
 		end
-	elseif text:find("Надеемся, что вы") and ckAutoAduty then
+	elseif text:find("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅ") and ckAutoAduty then
 		lua_thread.create(function() 
 			local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 
@@ -953,7 +955,7 @@ function sampev.onServerMessage(color, text)
 				sampSendChat('/aduty')
 			end
 		end)
-	elseif text:find("во время слежки") then
+	elseif text:find("пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ") then
 		rInfo.lastCar = -1
 		rInfo.id = -1
 		wInfo.spectatemenu = false
@@ -961,7 +963,7 @@ function sampev.onServerMessage(color, text)
 		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info then
 			imgui.Process = false
 		end
-	elseif text:find("Вы не можете следить за администратором") or text:find("Данный игрок не авторизован") then
+	elseif text:find("пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ") or text:find("пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ") then
 		sampSendChat(string.format("/re %d", rInfo.id))
 		wInfo.spectatemenu = true
 	end
@@ -1244,3 +1246,59 @@ function dayOnlineTimer()
 		end
 	end
 end
+
+function autoupdate(json_url, prefix, url)
+	local dlstatus = require('moonloader').download_status
+	local json = getWorkingDirectory() .. '\\'..thisScript().name..'-version.json'
+	if doesFileExist(json) then os.remove(json) end
+	downloadUrlToFile(json_url, json,
+	  function(id, status, p1, p2)
+		if status == dlstatus.STATUSEX_ENDDOWNLOAD then
+		  if doesFileExist(json) then
+			local f = io.open(json, 'r')
+			if f then
+			  local info = decodeJson(f:read('*a'))
+			  updatelink = info.updateurl
+			  updateversion = info.latest
+			  f:close()
+			  os.remove(json)
+			  if updateversion ~= thisScript().version then
+				lua_thread.create(function(prefix)
+				  local dlstatus = require('moonloader').download_status
+				  local color = -1
+				  sampAddChatMessage((prefix..'РћР±РЅР°СЂСѓР¶РµРЅРѕ РѕР±РЅРѕРІР»РµРЅРёРµ. РџС‹С‚Р°СЋСЃСЊ РѕР±РЅРѕРІРёС‚СЊСЃСЏ c '..thisScript().version..' РЅР° '..updateversion), color)
+				  wait(250)
+				  downloadUrlToFile(updatelink, thisScript().path,
+					function(id3, status1, p13, p23)
+					  if status1 == dlstatus.STATUS_DOWNLOADINGDATA then
+						print(string.format('Р—Р°РіСЂСѓР¶РµРЅРѕ %d РёР· %d.', p13, p23))
+					  elseif status1 == dlstatus.STATUS_ENDDOWNLOADDATA then
+						print('Р—Р°РіСЂСѓР·РєР° РѕР±РЅРѕРІР»РµРЅРёСЏ Р·Р°РІРµСЂС€РµРЅР°.')
+						sampAddChatMessage((prefix..'РћР±РЅРѕРІР»РµРЅРёРµ Р·Р°РІРµСЂС€РµРЅРѕ!'), color)
+						goupdatestatus = true
+						lua_thread.create(function() wait(500) thisScript():reload() end)
+					  end
+					  if status1 == dlstatus.STATUSEX_ENDDOWNLOAD then
+						if goupdatestatus == nil then
+						  sampAddChatMessage((prefix..'РћР±РЅРѕРІР»РµРЅРёРµ РїСЂРѕС€Р»Рѕ РЅРµСѓРґР°С‡РЅРѕ. Р—Р°РїСѓСЃРєР°СЋ СѓСЃС‚Р°СЂРµРІС€СѓСЋ РІРµСЂСЃРёСЋ..'), color)
+						  update = false
+						end
+					  end
+					end
+				  )
+				  end, prefix
+				)
+			  else
+				update = false
+				print('v'..thisScript().version..': РћР±РЅРѕРІР»РµРЅРёРµ РЅРµ С‚СЂРµР±СѓРµС‚СЃСЏ.')
+			  end
+			end
+		  else
+			print('v'..thisScript().version..': РќРµ РјРѕРіСѓ РїСЂРѕРІРµСЂРёС‚СЊ РѕР±РЅРѕРІР»РµРЅРёРµ. РЎРјРёСЂРёС‚РµСЃСЊ РёР»Рё РїСЂРѕРІРµСЂСЊС‚Рµ СЃР°РјРѕСЃС‚РѕСЏС‚РµР»СЊРЅРѕ РЅР° '..url)
+			update = false
+		  end
+		end
+	  end
+	)
+	while update ~= false do wait(100) end
+  end
