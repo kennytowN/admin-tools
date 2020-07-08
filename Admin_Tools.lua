@@ -1,4 +1,4 @@
-script_version('0.1.8-R2')
+script_version('0.1.9')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -8,6 +8,7 @@ local Matrix3X3 			= require "matrix3x3"
 local Vector3D 				= require "vector3d"
 local inicfg 				= require 'inicfg'
 
+DEV_VERSION = false
 encoding.default = 'cp1251'
 u8 = encoding.UTF8
 
@@ -38,7 +39,8 @@ local tInfo = {
 	exitId = -1
 }
 
-local rInfo = {
+local recInfo = {
+	loading = false,
 	state = false,
     id = -1,
 	lastCar = -1
@@ -68,7 +70,6 @@ local mainIni = inicfg.load({
 		autoAduty = false,
 		autologin = false,
 		offReconAlert = true,
-		ckOffAsk = false,
 		password = ""
 	},
 
@@ -80,7 +81,7 @@ local mainIni = inicfg.load({
 	punishments = {
 		jail = 0,
 		kick = 0,
-		mute = 0,
+		mute = 0
 	},
 
 	dayOnline = {
@@ -98,7 +99,9 @@ function main()
 	while not isSampAvailable() do wait(200) end
 	while not sampIsLocalPlayerSpawned() do wait(1) end
 
-	autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", '['..string.upper(thisScript().name)..']: ', "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
+	if not DEV_VERSION then
+		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", '['..string.upper(thisScript().name)..']: ', "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
+	end
 
 	-- Reconnect
 	sampRegisterChatCommand("rec", reconnect)
@@ -118,6 +121,7 @@ function main()
 	if serveradress ~= "95.181.158.18" then
 		thisScript():unload()
 	else
+		lua_thread.create(reconUpdate)
 		lua_thread.create(dayOnlineTimer)
 
 		r_smart_lib_imgui()
@@ -127,7 +131,7 @@ function main()
 		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен, приятного использования.", 0xffa500)
 
 		while true do
-			if isKeyJustPressed(key.VK_F9) then
+			if isKeyJustPressed(key.VK_F9) then -- Вызов основного меню
 				if not pInfo.aduty then sampSendChat('/aduty')
 				else
 					pInfo.clickwarp = false
@@ -153,7 +157,7 @@ function main()
 				end
 			end
 
-			if pInfo.aduty then
+			if pInfo.aduty then -- Работа основных функций скриптов
 				while isPauseMenuActive() do
 					if cursorEnabled then
 						showCursor(false)
@@ -170,7 +174,7 @@ function main()
 					end
 				end
 
-				if isKeyJustPressed(key.VK_RSHIFT) then -- airbrake
+				if isKeyJustPressed(key.VK_RSHIFT) then -- Аирбрейк
 					pInfo.airbreak = not pInfo.airbreak
 
 					if pInfo.airbreak then
@@ -179,7 +183,7 @@ function main()
 					end
 				end
 				
-				if pInfo.clickwarp and pInfo.aduty then
+				if pInfo.clickwarp then -- Clickwarp by FYP
 					local mode = sampGetCursorMode()
 					if mode == 0 then
 						showCursor(true)
@@ -284,8 +288,8 @@ function main()
 							end
 						end
 					end
-				end		
-
+				end	
+				
 				local oTime = os.time()
 				if pInfo.traicers and not isPauseMenuActive() then
 					for i = 1, BulletSync.maxLines do
@@ -300,35 +304,46 @@ function main()
 						end
 					end
 				end
-			end
 
-			if nextplayer then 
-				local result, ped = sampGetCharHandleBySampPlayerId(rInfo.id)
-
-				if not result then
-					wait(400)
-				else
-					wait(200)
-					nextplayer = false
-				end
-			else
-				if rInfo.id ~= -1 and rInfo.state then
-					local _, ped = sampGetCharHandleBySampPlayerId(rInfo.id)
-					
-					if ped ~= -1 then
-						if isCharInAnyCar(ped) and storeCarCharIsInNoSave(ped) ~= rInfo.lastCar then
-							sampSendClickTextdraw(tInfo.refreshId)
-						elseif not isCharInAnyCar(ped) and rInfo.lastCar ~= -1 then
-							sampSendClickTextdraw(tInfo.refreshId)
-							rInfo.lastCar = -1
-						end
-
-						if not isCharInAnyHeli(ped) and not isCharInAnyPlane(ped) and getDistanceToPlayer(rInfo.id) > 30.0 or getDistanceToPlayer(rInfo.id) == -1 then
-							sampSendClickTextdraw(tInfo.refreshId)
-						end
-					else
-						sampSendClickTextdraw(tInfo.refreshId)
+				local time = os.clock() * 1000
+				if pInfo.airbreak then -- Аирбрейк
+					if isCharInAnyCar(playerPed) then heading = getCarHeading(storeCarCharIsInNoSave(playerPed))
+					else heading = getCharHeading(playerPed) end
+					local camCoordX, camCoordY, camCoordZ = getActiveCameraCoordinates()
+					local targetCamX, targetCamY, targetCamZ = getActiveCameraPointAt()
+					local angle = getHeadingFromVector2d(targetCamX - camCoordX, targetCamY - camCoordY)
+					if isCharInAnyCar(playerPed) then difference = 0.79 else difference = 1.0 end
+					setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3] - difference)
+					if isKeyDown(key.VK_W) then
+						airBrkCoords[1] = airBrkCoords[1] + pInfo.airspeed * math.sin(-math.rad(angle))
+						airBrkCoords[2] = airBrkCoords[2] + pInfo.airspeed * math.cos(-math.rad(angle))
+						if not isCharInAnyCar(playerPed) then setCharHeading(playerPed, angle)
+						else setCarHeading(storeCarCharIsInNoSave(playerPed), angle) end
+					elseif isKeyDown(key.VK_S) then
+						airBrkCoords[1] = airBrkCoords[1] - pInfo.airspeed * math.sin(-math.rad(heading))
+						airBrkCoords[2] = airBrkCoords[2] - pInfo.airspeed * math.cos(-math.rad(heading))
 					end
+					if isKeyDown(key.VK_A) then
+						airBrkCoords[1] = airBrkCoords[1] - pInfo.airspeed * math.sin(-math.rad(heading - 90))
+						airBrkCoords[2] = airBrkCoords[2] - pInfo.airspeed * math.cos(-math.rad(heading - 90))
+					elseif isKeyDown(key.VK_D) then
+						airBrkCoords[1] = airBrkCoords[1] - pInfo.airspeed * math.sin(-math.rad(heading + 90))
+						airBrkCoords[2] = airBrkCoords[2] - pInfo.airspeed * math.cos(-math.rad(heading + 90))
+					end
+					if isKeyDown(key.VK_UP) then airBrkCoords[3] = airBrkCoords[3] + pInfo.airspeed / 2.0 end
+					if isKeyDown(key.VK_DOWN) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - pInfo.airspeed / 2.0 end
+					if not isSampfuncsConsoleActive() and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
+						if isKeyDown(key.VK_OEM_PLUS) and time - tick.Keys.Plus > tick.Time.PlusMinus then
+							if pInfo.airspeed < 14.9 then pInfo.airspeed = pInfo.airspeed + 0.5 end
+							tick.Keys.Plus = time
+						elseif isKeyDown(key.VK_OEM_MINUS) and time - tick.Keys.Minus > tick.Time.PlusMinus then
+							if pInfo.airspeed > 0.5 then pInfo.airspeed = pInfo.airspeed - 0.5 end
+							tick.Keys.Minus = time
+						end
+					end
+				else
+					setCharProofs(playerPed, true, true, true, true, true)
+					writeMemory(0x96916E, 1, 1, false)
 				end
 			end
 
@@ -343,47 +358,6 @@ function main()
 
 				sampSetGamestate(1)
 				res = false
-			end
-
-			local time = os.clock() * 1000
-			if pInfo.airbreak then -- airbrake
-				if isCharInAnyCar(playerPed) then heading = getCarHeading(storeCarCharIsInNoSave(playerPed))
-				else heading = getCharHeading(playerPed) end
-				local camCoordX, camCoordY, camCoordZ = getActiveCameraCoordinates()
-				local targetCamX, targetCamY, targetCamZ = getActiveCameraPointAt()
-				local angle = getHeadingFromVector2d(targetCamX - camCoordX, targetCamY - camCoordY)
-				if isCharInAnyCar(playerPed) then difference = 0.79 else difference = 1.0 end
-				setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3] - difference)
-				if isKeyDown(key.VK_W) then
-					airBrkCoords[1] = airBrkCoords[1] + pInfo.airspeed * math.sin(-math.rad(angle))
-					airBrkCoords[2] = airBrkCoords[2] + pInfo.airspeed * math.cos(-math.rad(angle))
-					if not isCharInAnyCar(playerPed) then setCharHeading(playerPed, angle)
-					else setCarHeading(storeCarCharIsInNoSave(playerPed), angle) end
-				elseif isKeyDown(key.VK_S) then
-					airBrkCoords[1] = airBrkCoords[1] - pInfo.airspeed * math.sin(-math.rad(heading))
-					airBrkCoords[2] = airBrkCoords[2] - pInfo.airspeed * math.cos(-math.rad(heading))
-				end
-				if isKeyDown(key.VK_A) then
-					airBrkCoords[1] = airBrkCoords[1] - pInfo.airspeed * math.sin(-math.rad(heading - 90))
-					airBrkCoords[2] = airBrkCoords[2] - pInfo.airspeed * math.cos(-math.rad(heading - 90))
-				elseif isKeyDown(key.VK_D) then
-					airBrkCoords[1] = airBrkCoords[1] - pInfo.airspeed * math.sin(-math.rad(heading + 90))
-					airBrkCoords[2] = airBrkCoords[2] - pInfo.airspeed * math.cos(-math.rad(heading + 90))
-				end
-				if isKeyDown(key.VK_UP) then airBrkCoords[3] = airBrkCoords[3] + pInfo.airspeed / 2.0 end
-				if isKeyDown(key.VK_DOWN) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - pInfo.airspeed / 2.0 end
-				if not isSampfuncsConsoleActive() and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
-					if isKeyDown(key.VK_OEM_PLUS) and time - tick.Keys.Plus > tick.Time.PlusMinus then
-						if pInfo.airspeed < 14.9 then pInfo.airspeed = pInfo.airspeed + 0.5 end
-						tick.Keys.Plus = os.clock() * 1000
-					elseif isKeyDown(key.VK_OEM_MINUS) and time - tick.Keys.Minus > tick.Time.PlusMinus then
-						if pInfo.airspeed > 0.5 then pInfo.airspeed = pInfo.airspeed - 0.5 end
-						tick.Keys.Minus = os.clock() * 1000
-					end
-				end
-			else
-				setCharProofs(playerPed, true, true, true, true, true)
-				writeMemory(0x96916E, 1, 1, false)
 			end
 
 			wait(0)
@@ -456,7 +430,6 @@ function imgui_init()
 	ckTraicers = imgui.ImBool(mainIni.functions.traicers)
 	ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
 	ckOffReconAlert = imgui.ImBool(mainIni.settings.offReconAlert)
-	ckOffAsk = imgui.ImBool(mainIni.settings.ckOffAsk)
 	ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
 
 	temp_buffers = {
@@ -484,7 +457,7 @@ function imgui_init()
 	function imgui.OnDrawFrame()
 		ScreenX, ScreenY = getScreenResolution()
 
-		if wInfo.spectatemenu and rInfo.id ~= -1 then
+		if wInfo.spectatemenu and recInfo.id ~= -1 and not recInfo.loading and sampIsPlayerConnected(recInfo.id) then
 			if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
 				imgui.ShowCursor = false
 			end
@@ -501,20 +474,20 @@ function imgui_init()
 				imgui.SetNextWindowPos(imgui.ImVec2(1080, ScreenY - 200), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 			end
 
-			imgui.Begin(sampGetPlayerNickname(rInfo.id), wInfo.spectatemenu, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+			imgui.Begin(sampGetPlayerNickname(recInfo.id), wInfo.spectatemenu, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
-			local result, ped = sampGetCharHandleBySampPlayerId(rInfo.id)
+			local result, ped = sampGetCharHandleBySampPlayerId(recInfo.id)
 
-			if result and doesCharExist(ped) then
+			if result then
 				imgui.Text(string.format(u8"Skin: %d", getCharModel(ped)))
 				imgui.SameLine()
 
 				if isCharInAnyCar(ped) then
 					local vehicleId = storeCarCharIsInNoSave(ped)
 
-					imgui.Text(string.format(u8"Ping: %d", sampGetPlayerPing(rInfo.id)))
+					imgui.Text(string.format(u8"Ping: %d", sampGetPlayerPing(recInfo.id)))
 					imgui.SameLine()
-					imgui.Text(string.format(u8"Armour: %d", sampGetPlayerArmor(rInfo.id)))
+					imgui.Text(string.format(u8"Armour: %d", sampGetPlayerArmor(recInfo.id)))
 					imgui.Text(string.format(u8"HP: %d", getCarHealth(vehicleId)))
 					imgui.SameLine()
 					imgui.Text(string.format(u8"Speed: %f", getCarSpeed(vehicleId) * 2.8))
@@ -523,20 +496,20 @@ function imgui_init()
 					imgui.SameLine()
 					imgui.Text(string.format(u8"Engine: %s", isCarEngineOn(vehicleId)))
 				else
-					imgui.Text(string.format(u8"HP: %d", sampGetPlayerHealth(rInfo.id)))
+					imgui.Text(string.format(u8"HP: %d", sampGetPlayerHealth(recInfo.id)))
 					imgui.SameLine()
-					imgui.Text(string.format(u8"Ping: %d", sampGetPlayerPing(rInfo.id)))
-					imgui.Text(string.format(u8"Armour: %d", sampGetPlayerArmor(rInfo.id)))
+					imgui.Text(string.format(u8"Ping: %d", sampGetPlayerPing(recInfo.id)))
+					imgui.Text(string.format(u8"Armour: %d", sampGetPlayerArmor(recInfo.id)))
 					imgui.SameLine()
 					imgui.Text(string.format(u8"Speed: %f", getCharSpeed(ped)))
 				end
 
 				if imgui.Button(u8'Next') then
-					if rInfo.id == sampGetMaxPlayerId(false) then
+					if recInfo.id == sampGetMaxPlayerId(false) then
 						sampAddChatMessage("[Admin Tools]:{FFFFFF} Следующий игрок не найден.", 0xffa500)
 					else 
-						for i = rInfo.id, sampGetMaxPlayerId(false) do
-							if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= rInfo.id then
+						for i = recInfo.id, sampGetMaxPlayerId(false) do
+							if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
 								sampSendChat(string.format("/re %d", i))
 								break
 							end
@@ -546,40 +519,47 @@ function imgui_init()
 				imgui.SameLine()
 
 				if imgui.Button(u8'Previous') then
-					if rInfo.id == 0 then
+					local find = false
+
+					if recInfo.id == 0 then
 						sampAddChatMessage("[Admin Tools]:{FFFFFF} Предыдущий игрок не найден.", 0xffa500)
 					else 
-						for i = rInfo.id, 0, -1 do
-							if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= rInfo.id then
+						for i = recInfo.id, 0, -1 do
+							if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
+								find = true
 								sampSendChat(string.format("/re %d", i))
 								break
 							end
+						end
+
+						if not find then
+							sampAddChatMessage("[Admin Tools]:{FFFFFF} Предыдущий игрок не найден.", 0xffa500)
 						end
 					end
 				end
 				imgui.SameLine()
 
 				if imgui.Button(u8'Spawn') then
-					sampSendChat(string.format("/spawn %d", rInfo.id))
+					sampSendChat(string.format("/spawn %d", recInfo.id))
 				end
 				imgui.SameLine()
 				
 				if imgui.Button(u8'Вы тут?') then
-					sampSendChat(string.format("/ans %d Вы тут? Ответьте в /b.", rInfo.id))
+					sampSendChat(string.format("/ans %d Вы тут? Ответьте в /b.", recInfo.id))
 				end
 				imgui.SameLine()
 				
 				if imgui.Button(u8'Не прыгайте') then
-					sampSendChat(string.format("/ans %d Не прыгайте.", rInfo.id))
+					sampSendChat(string.format("/ans %d Не прыгайте.", recInfo.id))
 				end
 
 				if imgui.Button(u8'/aheal') then
-					sampSendChat(string.format("/aheal %d", rInfo.id))
+					sampSendChat(string.format("/aheal %d", recInfo.id))
 				end
 				imgui.SameLine()
 
 				if imgui.Button(u8'/sethp') then
-					sampSendChat(string.format("/sethp %d %d", rInfo.id, tonumber(temp_buffers.sethp.v)))
+					sampSendChat(string.format("/sethp %d %d", recInfo.id, tonumber(temp_buffers.sethp.v)))
 				end
 
 				imgui.SameLine()
@@ -706,15 +686,7 @@ function imgui_init()
 			imgui.SameLine()
 
 			if imgui.Checkbox(u8'Отключение оповещения о начале слежки', ckOffReconAlert) then
-				mainIni.settings.offReconAlert = ckOffReconAlert.value
-				inicfg.save(mainIni, "admintools.ini")
-			end
-
-			imgui.TextQuestion(u8"Визуально отключает вопросы от игроков")
-			imgui.SameLine()
-
-			if imgui.Checkbox(u8'Отключение вопросов от игроков', ckOffAsk) then
-				mainIni.settings.OffAsk = ckOffAsk.value
+				mainIni.settings.offReconAlert = ckOffReconAlert.v
 				inicfg.save(mainIni, "admintools.ini")
 			end
 
@@ -867,7 +839,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 end
 
 function sampev.onBulletSync(playerid, data)
-	if rInfo.state and tonumber(playerid) == rInfo.id and rInfo.traicers then
+	if recInfo.state and tonumber(playerid) == recInfo.id and recInfo.traicers then
 		if data.target.x == -1 or data.target.y == -1 or data.target.z == -1 then
 			return true
 		end
@@ -884,67 +856,6 @@ function sampev.onBulletSync(playerid, data)
 	end
 end
 
-function sampev.onTogglePlayerSpectating(state)
-    rInfo.state = state
-
-	if not state then
-		rInfo.lastCar = -1
-		rInfo.id = -1
-		wInfo.spectatemenu = false
-	else
-		wInfo.spectatemenu = true
-	end
-end
-
-function sampev.onSendCommand(cmd)
-	local reId = string.match(cmd, "^%/re (%d+)")
-	if not reId then reId = string.match(cmd, "^%/sp (%d+)") end
-
-	if reId then
-		local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-
-		if sampIsPlayerConnected(reId) and sampGetPlayerColor(reId) ~= 16510045 and reId ~= id and sampGetPlayerScore(reId) ~= 0 then
-			if rInfo.id then 
-				nextplayer = true 
-			end
-
-			rInfo.state = false
-			rInfo.id = tonumber(reId)
-			saveId = reId
-			rInfo.lastCar = -1
-
-			wInfo.spectatemenu = true
-			imgui.Process = true
-		end
-	end
-	
-    if cmd:find("/re off") or cmd:find("/sp off") then
-        rInfo.lastCar = -1
-		rInfo.id = -1
-		wInfo.spectatemenu = false
-		
-		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
-			imgui.Process = false
-			imgui.ShowCursor = false
-		end
-    end
-end
-
-function sampev.onSpectatePlayer(playerid, camtype)
-    rInfo.state = true
-    rInfo.id = tonumber(playerid)
-	rInfo.lastCar = -1
-end
-function sampev.onSpectateVehicle(carid, camtype)
-    local _, car = sampGetCarHandleBySampVehicleId(carid)
-
-    rInfo.lastCar = car
-	rInfo.state = true
-	
-	reconNext = false
-	reconPrevious = false
-end
-
 function sampev.onServerMessage(color, text)
     local _, playerid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 
@@ -952,8 +863,6 @@ function sampev.onServerMessage(color, text)
 		if text:find(sampGetPlayerNickname(playerid)) or mainIni.settings.offReconAlert then 
 			return false
 		end
-	elseif text:find("Вопрос от") and mainIni.settings.OffAsk then
-		return false
 	end
 
 	if text:find(sampGetPlayerNickname(playerid)) then
@@ -963,15 +872,16 @@ function sampev.onServerMessage(color, text)
 			writeMemory(0x96916E, 1, 1, false)
 		elseif text:find("ушёл с дежурства") then 
 			pInfo.aduty = false 
+			setCharProofs(playerPed, false, false, false, false, false)
 		elseif text:find("выдал бан OOC чата") then
 			mainIni.punishments.mute = mainIni.punishments.mute + 1
-			inicfg.save(mainIni, "admintools.ini")
+			inicfg.save(mainIni, "admintools")
 		elseif text:find("посадил") then
 			mainIni.punishments.jail = mainIni.punishments.jail + 1
-			inicfg.save(mainIni, "admintools.ini")
+			inicfg.save(mainIni, "admintools")
 		elseif text:find("кикнул") then
 			mainIni.punishments.kick = mainIni.punishments.kick + 1
- 			inicfg.save(mainIni, "admintools.ini")
+			inicfg.save(mainIni, "admintools")
 		end
 	elseif text:find("Надеемся, что вы") and ckAutoAduty then
 		lua_thread.create(function() 
@@ -983,16 +893,25 @@ function sampev.onServerMessage(color, text)
 			end
 		end)
 	elseif text:find("Во время слежки") then
-		rInfo.lastCar = -1
-		rInfo.id = -1
+		recInfo.loading = false
+		recInfo.state = false
+		recInfo.lastCar = -1
+		recInfo.id = -1
 		wInfo.spectatemenu = false
 		
 		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
 			imgui.Process = false
+			imgui.ShowCursor = false
 		end
 	elseif text:find("Вы не можете следить за администратором") or text:find("Данный игрок не авторизован") then
-		sampSendChat(string.format("/re %d", rInfo.id))
-		wInfo.spectatemenu = true
+		if recInfo.id ~= -1 then
+			recInfo.loading = true
+			recInfo.state = true
+			recInfo.id = saveId
+
+			imgui.Process = true
+			wInfo.spectatemenu = true
+		end
 	end
 end
 
@@ -1003,8 +922,44 @@ end
 
 function sampev.onSendClickTextDraw(textdrawId)
 	if textdrawId == tInfo.exitId then
-		rInfo.lastCar = -1
-		rInfo.id = -1
+		recInfo.loading = false
+		recInfo.state = false
+		recInfo.lastCar = -1
+		recInfo.id = -1
+		wInfo.spectatemenu = false
+		
+		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
+			imgui.Process = false
+			imgui.ShowCursor = false
+		end
+	end
+end
+
+function sampev.onSpectateVehicle(vehicleId, camtype)
+	recInfo.lastCar = vehicleId
+end
+
+function sampev.onSendCommand(cmd)
+	local reId = string.match(cmd, "^%/re (%d+)")
+	if not reId then reId = string.match(cmd, "^%/sp (%d+)") end
+
+	if reId then
+		if sampGetPlayerColor(reId) ~= 16510045 and sampIsPlayerConnected(reId) and sampGetPlayerScore(reId) == 1 then
+			saveId = reId
+		end
+
+		recInfo.loading = true
+		recInfo.state = true
+		recInfo.id = tonumber(reId)
+		recInfo.lastCar = -1
+
+		imgui.Process = true
+		wInfo.spectatemenu = true
+	elseif cmd:find("/re off") or cmd:find("/sp off") then
+		recInfo.loading = false
+		recInfo.state = false
+		recInfo.lastCar = -1
+		recInfo.id = -1
 		wInfo.spectatemenu = false
 		
 		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
@@ -1260,6 +1215,41 @@ function secToTime(sec)
 end
 
 -- Custom threads
+function reconUpdate()
+	while true do
+		if recInfo.state and sampIsPlayerConnected(recInfo.id) then
+			local result, ped = sampGetCharHandleBySampPlayerId(recInfo.id)
+
+			if result then
+				recInfo.loading = false
+
+				if isCharInAnyCar(ped) then
+					local _, vehicleId = sampGetVehicleIdByCarHandle(storeCarCharIsInNoSave(ped))
+
+					if vehicleId ~= recInfo.lastCar then
+						sampSendClickTextdraw(tInfo.refreshId)
+					end
+				elseif not isCharInAnyCar(ped) then
+					print(recInfo.lastCar)
+
+					if recInfo.lastCar ~= -1 then
+						sampSendClickTextdraw(tInfo.refreshId)
+						recInfo.lastCar = -1
+					end
+				end
+
+				if not isCharInAnyHeli(ped) and not isCharInAnyPlane(ped) and getDistanceToPlayer(recInfo.id) > 35.0 or getDistanceToPlayer(recInfo.id) == -1 then
+					sampSendClickTextdraw(tInfo.refreshId)
+				end
+			else
+				wait(100)
+			end
+		end
+
+		wait(0)
+	end
+end
+
 function dayOnlineTimer()
 	while true do
 		wait(1000)
