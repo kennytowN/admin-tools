@@ -1,4 +1,4 @@
-script_version('0.2.2-stable')
+script_version('0.2.3')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -30,7 +30,7 @@ local scriptInfo = {
 	myId = -1,
 	aduty = false,
   	clickwarp = false,
- 	airBreak = false,
+	airBreak = false, 
   	airspeed = 0.5,
 
   	textdraws = {
@@ -63,6 +63,7 @@ local mainIni = inicfg.load({
     	autologin = false,
     	showpass = false,
 		offReconAlert = true,
+		offHelpersAnswers = false,
 		password = ""
 	},
 
@@ -99,15 +100,12 @@ function main()
 		initializeRender()
 
 		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен, приятного использования.", 0xffa500)
-		
-		if mainIni.set.wallhack then
-			nameTagSet(true)
-		end
 
 		while true do
 			if isKeyJustPressed(key.VK_F9) then -- Activate:: Main window
 				if not scriptInfo.aduty then sampSendChat("/aduty") 
 				else
+					scriptInfo.clickwarp = false
 					wInfo.main.v = not wInfo.main.v
 
 					if not wInfo.main.v then
@@ -123,10 +121,11 @@ function main()
 			end
 
 			if scriptInfo.aduty then
-				if isKeyDown(VK_MBUTTON) and ckClickWarp.v then -- Activate:: Clickwarp
-					cursorEnabled = not cursorEnabled
+				if isKeyDown(key.VK_MBUTTON) and ckClickWarp.v then -- Activate:: Clickwarp
+					scriptInfo.clickwarp = not scriptInfo.clickwarp
+					cursorEnabled = scriptInfo.clickwarp
 					showCursor(cursorEnabled)
-					while isKeyDown(VK_MBUTTON) do wait(80) end
+					while isKeyDown(key.VK_MBUTTON) do wait(80) end
 				end
 
 				if isKeyJustPressed(key.VK_RSHIFT) then -- Activate:: Airbreak
@@ -217,8 +216,7 @@ function main()
 							local zOffset = 300
 							if normal[3] >= 0.5 then zOffset = 1 end
 							-- search for the ground position vertically down
-							local result, colpoint2 = processLineOfSight(pos.x, pos.y, pos.z + zOffset, pos.x, pos.y, pos.z - 0.3,
-							true, true, false, true, false, false, false)
+							local result, colpoint2 = processLineOfSight(pos.x, pos.y, pos.z + zOffset, pos.x, pos.y, pos.z - 0.3, true, true, false, true, false, false, false)
 
 							if result then
 								pos = Vector3D(colpoint2.pos[1], colpoint2.pos[2], colpoint2.pos[3] + 1)
@@ -237,7 +235,7 @@ function main()
 									if doesVehicleExist(car) and (not isCharInAnyCar(playerPed) or storeCarCharIsInNoSave(playerPed) ~= car) then
 										displayVehicleName(sx, sy - hoffs * 2, getNameOfVehicleModel(getCarModel(car)))
 										local color = 0xAAFFFFFF
-										if isKeyDown(VK_RBUTTON) then
+										if isKeyDown(key.VK_RBUTTON) then
 										tpIntoCar = car
 										color = 0xFFFFFFFF
 										end
@@ -248,27 +246,28 @@ function main()
 								createPointMarker(pos.x, pos.y, pos.z)
 
 								-- teleport!
-								if isKeyDown(keyApply) then
-									if tpIntoCar then
+								if isKeyDown(key.VK_LBUTTON) then
+								  if tpIntoCar then
 									if not jumpIntoCar(tpIntoCar) then
-										-- teleport to the car if there is no free seats
-										teleportPlayer(pos.x, pos.y, pos.z)
+									  -- teleport to the car if there is no free seats
+									  teleportPlayer(pos.x, pos.y, pos.z)
 									end
-									else
+								  else
 									if isCharInAnyCar(playerPed) then
-										local norm = Vector3D(colpoint.normal[1], colpoint.normal[2], 0)
-										local norm2 = Vector3D(colpoint2.normal[1], colpoint2.normal[2], colpoint2.normal[3])
-										rotateCarAroundUpAxis(storeCarCharIsInNoSave(playerPed), norm2)
-										pos = pos - norm * 1.8
-										pos.z = pos.z - 0.8
+									  local norm = Vector3D(colpoint.normal[1], colpoint.normal[2], 0)
+									  local norm2 = Vector3D(colpoint2.normal[1], colpoint2.normal[2], colpoint2.normal[3])
+									  rotateCarAroundUpAxis(storeCarCharIsInNoSave(playerPed), norm2)
+									  pos = pos - norm * 1.8
+									  pos.z = pos.z - 0.8
 									end
 									teleportPlayer(pos.x, pos.y, pos.z)
-									end
+								  end
 
-									removePointMarker()
-					
-									while isKeyDown(keyApply) do wait(0) end
-									showCursor(false)
+								  scriptInfo.clickwarp = false
+								  removePointMarker()
+				  
+								  while isKeyDown(key.VK_LBUTTON) do wait(0) end
+								  showCursor(false)
 								end
 							end
 						end
@@ -276,8 +275,8 @@ function main()
 				end
 			end
 
-			removePointMarker()
 			wait(0)
+			removePointMarker()
 		end
 	end
 end
@@ -357,6 +356,7 @@ function imgui_init()
   
   	-- Search:: Variables settings
 	ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
+	ckOffHelpersAnswers = imgui.ImBool(mainIni.settings.offHelpersAnswers)
 	ckOffReconAlert = imgui.ImBool(mainIni.settings.offReconAlert)
  	ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
   
@@ -388,7 +388,7 @@ function imgui_init()
         if wInfo.info.v then drawInfo() end
         if wInfo.teleport.v then drawTeleport() end
 		if wInfo.func.v then drawFunctions() end
-		if wInfo.spectatemenu.v then drawSpectateMenu() end
+		if wInfo.spectatemenu.v and sampIsPlayerConnected(recInfo.id) and sampGetPlayerScore(recInfo.id) ~= 0 then drawSpectateMenu() end
     end
 end
 
@@ -537,6 +537,14 @@ function drawFunctions()
 
 	imgui.SameLine()
 	imgui.TextQuestion(u8"Убирает строку о начале слежки за игроком от другого администратора")
+
+	if imgui.Checkbox(u8'Отключение ответов от хелперов', ckOffHelpersAnswers) then
+		mainIni.settings.offHelpersAnswers = ckOffHelpersAnswers.v
+		inicfg.save(mainIni, "admintools.ini")
+	end
+
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Убирает медвежью услугу в виде оповещения о том, что саппорт ответил игроку")
 	
 	if imgui.Checkbox("Wall Hack", ckWallhack) then
 		mainIni.set.wallhack = ckWallhack.v
@@ -600,12 +608,10 @@ function drawSpectateMenu()
 	if recInfo.loading then
 		imgui.Text(u8"Loading...")
 
-		while ped == nil do
-			wait(1000)
+		if result then
+			recInfo.loading = false
 		end
-
-		recInfo.loading = false
-	elseif ped ~= nil then
+	else
 		imgui.Text(u8"Stats:\n\n")
 
 		imgui.Text(u8"Health:")
@@ -637,7 +643,7 @@ function drawSpectateMenu()
 
 			imgui.Text(u8"Vehicle health:")
 			imgui.SameLine()
-			imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t  %s", getCarHealth(vehicleId)))
+			imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t  %s", getCarHealth(vehicleId)))
 		else
 			imgui.Text(u8"Speed:")
 			imgui.SameLine()
@@ -659,6 +665,7 @@ function drawSpectateMenu()
 				for i = recInfo.id, 0, -1 do
 					if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
 						find = true
+						recInfo.loading = true
 						sampSendChat(string.format("/re %d", i))
 						break
 					end
@@ -677,6 +684,7 @@ function drawSpectateMenu()
 			else 
 				for i = recInfo.id, sampGetMaxPlayerId(false) do
 					if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
+						recInfo.loading = true
 						sampSendChat(string.format("/re %d", i))
 						break
 					end
@@ -935,8 +943,8 @@ function teleportPlayer(x, y, z)
 
 	setCharCoordinatesDontResetAnim(playerPed, x, y, z)
 
-	writeMemory(0x00BA6748 + 0x15C, 1, 1, false) -- textures loaded
-	writeMemory(0x00BA6748 + 0x15D, 1, 5, false) -- current menu
+	--writeMemory(0x00BA6748 + 0x15C, 1, 1, false) -- textures loaded
+	--writeMemory(0x00BA6748 + 0x15D, 1, 5, false) -- current menu
 end
 
 function setCharCoordinatesDontResetAnim(char, x, y, z)
@@ -1038,11 +1046,17 @@ function sampev.onServerMessage(color, text)
 		if text:find(sampGetPlayerNickname(scriptInfo.myId)) or mainIni.settings.offReconAlert then
 			return false 
 		end
+	elseif text:find("[A] Хелпер") and text:find("->") and mainIni.settings.offHelpersAnswers then
+		return false
 	elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(scriptInfo.myId) ~= 16510045 then
 		lua_thread.create(function() 
 			wait(1000)
 			sampSendChat('/aduty')
 		end)
+
+		if mainIni.set.wallhack then
+			nameTagSet(true)
+		end
 	elseif text:find("Во время слежки") then
 		wInfo.spectatemenu.v = false
 		resetSpectateInfo()
@@ -1073,10 +1087,12 @@ end
 
 function sampev.onSendCommand(cmd)
 	local reId = string.match(cmd, "^%/re (%d+)")
+	if reId == nil then reId = string.match(cmd, "^%/sp (%d+)") end
+
 	if reId ~= nil then
 		recInfo.loading = true
 		recInfo.id = tonumber(reId)
-	elseif cmd:find('/re off') then
+	elseif cmd:find('/re off') or cmd:find('/sp off') then
 		resetSpectateInfo()
 
 		wInfo.spectatemenu.v = false
