@@ -1,4 +1,4 @@
-script_version('0.1.9-R3')
+script_version('"0.2.2-beta')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -12,10 +12,32 @@ DEV_VERSION = false
 encoding.default = 'cp1251'
 u8 = encoding.UTF8
 
-local ToScreen = convertGameScreenCoordsToWindowScreenCoords
-local nextplayer = false
-local main_window_state = false
+-- Search:: Script variables
 local BulletSync = {lastId = 0, maxLines = 15}
+
+for i = 1, BulletSync.maxLines do
+	BulletSync[i] = {enable = false, o = {x, y, z}, t = {x, y, z}, time = 0, tType = 0}
+end
+
+local recInfo = {
+	loading = false,
+	state = false,
+  	id = -1,
+	lastCar = -1
+}
+
+local scriptInfo = {
+	myId = -1,
+	aduty = false,
+  	clickwarp = false,
+ 	airBreak = false,
+  	airspeed = 0.5,
+
+  	textdraws = {
+		refreshId = -1,
+		exitId = -1
+  	}
+}
 
 local tick = {
 	Keys = {
@@ -34,264 +56,93 @@ local tick = {
 	}
 }
 
-local tInfo = {
-	refreshId = -1,
-	exitId = -1
-}
-
-local recInfo = {
-	loading = false,
-	state = false,
-    id = -1,
-	lastCar = -1
-}
-
-local pInfo = {
-	airbreak = false,
-	clickwarp = false,
-	aduty = false,
-	showpass = false,
-	airspeed = 0.5,
-	session_time = 0
-}
-
-local wInfo = {
-	main = false,
-	func = false,
-	stats = false,
-	settings = false,
-	info = false,
-	teleport = false,
-	spectatemenu = false
-}
-
+-- Search:: Main config
 local mainIni = inicfg.load({
 	settings = {
 		autoAduty = false,
-		autologin = false,
+    	autologin = false,
+    	showpass = false,
 		offReconAlert = true,
 		password = ""
 	},
 
-	functions = {
+	set = {
 		wallhack = false,
-		traicers = false
-	},
-
-	punishments = {
-		jail = 0,
-		kick = 0,
-		mute = 0
-	},
-
-	dayOnline = {
-		real = 0,
-		afk = 0
+		traicers = false,
+		clickwarp = false
 	}
 }, 'admintools')
 inicfg.save(mainIni, "admintools.ini")
-
-for i = 1, BulletSync.maxLines do
-	BulletSync[i] = {enable = false, o = {x, y, z}, t = {x, y, z}, time = 0, tType = 0}
-end
 
 function main()
 	while not isSampAvailable() do wait(200) end
 	while not sampIsLocalPlayerSpawned() do wait(1) end
 
 	if not DEV_VERSION then
-		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", '['..string.upper(thisScript().name)..']: ', "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
+		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
 	end
 
-	-- Reconnect
-	sampRegisterChatCommand("rec", reconnect)
+	local _, playerId = sampGetPlayerIdByCharHandle(PLAYER_PED)
 
-	-- Fix reload the script
-	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-
-	if sampGetPlayerColor(id) == 16510045 then 
-		pInfo.aduty = true 
-
-		setCharProofs(playerPed, true, true, true, true, true)
-		writeMemory(0x96916E, 1, 1, false)
+	if sampGetPlayerColor(playerId) == 16510045 then 
+		scriptInfo.aduty = true 
 	end
 
-	serveradress = sampGetCurrentServerAddress()
+	scriptInfo.myId = playerId
 
-	if serveradress ~= "95.181.158.18" then
+	--if sampGetCurrentServerAddress() ~= "37.230.162.117" then
+	if sampGetCurrentServerAddress() ~= "95.181.158.18" then
 		thisScript():unload()
 	else
-		lua_thread.create(reconUpdate)
-		lua_thread.create(dayOnlineTimer)
-
 		r_smart_lib_imgui()
 		imgui_init()
 		initializeRender()
 
 		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен, приятного использования.", 0xffa500)
+		
+		if mainIni.set.wallhack then
+			nameTagSet(true)
+		end
 
 		while true do
-			if isKeyJustPressed(key.VK_F9) then -- Вызов основного меню
-				if not pInfo.aduty then sampSendChat('/aduty')
+			if isKeyJustPressed(key.VK_F9) then -- Activate:: Main window
+				if not scriptInfo.aduty then sampSendChat("/aduty") 
 				else
-					pInfo.clickwarp = false
+					wInfo.main.v = not wInfo.main.v
 
-					wInfo.main = not wInfo.main
-
-					if not wInfo.spectatemenu and not wInfo.main then
-						imgui.Process = false
-						showCursor(false)
-					elseif wInfo.main then
-						imgui.Process = true
+					if not wInfo.main.v then
+						wInfo.func.v = false
+						wInfo.stats.v = false
+						wInfo.settings.v = false
+						wInfo.info.v = false
+						wInfo.teleport.v = false
+					else
 						imgui.ShowCursor = true
-						showCursor(true)
-					end
-
-					if not wInfo.main then
-						wInfo.func 			= false
-						wInfo.stats 		= false
-						wInfo.settings 		= false
-						wInfo.info 			= false
-						wInfo.teleport 		= false
 					end
 				end
 			end
 
-			if pInfo.aduty then -- Работа основных функций скриптов
-				while isPauseMenuActive() do
-					if cursorEnabled then
-						showCursor(false)
-					end
-					wait(100)
-				end
-				
-				if isKeyDown(key.VK_MBUTTON) then
-					pInfo.clickwarp = not pInfo.clickwarp
+			if scriptInfo.aduty then
+				if isKeyDown(VK_MBUTTON) and ckClickWarp.v then -- Activate:: Clickwarp
 					cursorEnabled = not cursorEnabled
 					showCursor(cursorEnabled)
-					while isKeyDown(key.VK_MBUTTON) do
-						wait(80)
-					end
+					while isKeyDown(VK_MBUTTON) do wait(80) end
 				end
 
-				if isKeyJustPressed(key.VK_RSHIFT) then -- Аирбрейк
-					pInfo.airbreak = not pInfo.airbreak
+				if isKeyJustPressed(key.VK_RSHIFT) then -- Activate:: Airbreak
+					scriptInfo.airbreak = not scriptInfo.airbreak
 
-					if pInfo.airbreak then
+					if scriptInfo.airbreak then
 						local posX, posY, posZ = getCharCoordinates(playerPed)
 						airBrkCoords = {posX, posY, posZ, 0.0, 0.0, getCharHeading(playerPed)}
 					end
 				end
-				
-				if pInfo.clickwarp then -- Clickwarp by FYP
-					local mode = sampGetCursorMode()
-					if mode == 0 then
-						showCursor(true)
-					end
-					local sx, sy = getCursorPos()
-					local sw, sh = getScreenResolution()
-					-- is cursor in game window bounds?
-					if sx >= 0 and sy >= 0 and sx < sw and sy < sh then
-						local posX, posY, posZ = convertScreenCoordsToWorld3D(sx, sy, 700.0)
-						local camX, camY, camZ = getActiveCameraCoordinates()
-						-- search for the collision point
-						local result, colpoint =
-							processLineOfSight(camX, camY, camZ, posX, posY, posZ, true, true, false, true, false, false, false)
-						if result and colpoint.entity ~= 0 then
-							local normal = colpoint.normal
-							local pos =
-								Vector3D(colpoint.pos[1], colpoint.pos[2], colpoint.pos[3]) -
-								(Vector3D(normal[1], normal[2], normal[3]) * 0.1)
-							local zOffset = 300
-							if normal[3] >= 0.5 then
-								zOffset = 1
-							end
-							-- search for the ground position vertically down
-							local result, colpoint2 =
-								processLineOfSight(
-								pos.x,
-								pos.y,
-								pos.z + zOffset,
-								pos.x,
-								pos.y,
-								pos.z - 0.3,
-								true,
-								true,
-								false,
-								true,
-								false,
-								false,
-								false
-							)
-							if result then
-								pos = Vector3D(colpoint2.pos[1], colpoint2.pos[2], colpoint2.pos[3] + 1)
-				
-								local curX, curY, curZ = getCharCoordinates(playerPed)
-								local dist = getDistanceBetweenCoords3d(curX, curY, curZ, pos.x, pos.y, pos.z)
-								local hoffs = renderGetFontDrawHeight(font)
-				
-								sy = sy - 2
-								sx = sx - 2
-								renderFontDrawText(font, string.format("%0.2fm", dist), sx, sy - hoffs, 0xEEEEEEEE)
-				
-								local tpIntoCar = nil
-								if colpoint.entityType == 2 then
-									local car = getVehiclePointerHandle(colpoint.entity)
-									if
-										doesVehicleExist(car) and
-											(not isCharInAnyCar(playerPed) or storeCarCharIsInNoSave(playerPed) ~= car)
-									then
-										displayVehicleName(sx, sy - hoffs * 2, getNameOfVehicleModel(getCarModel(car)))
-										local color = 0xAAFFFFFF
-										if isKeyDown(key.VK_RBUTTON) then
-											tpIntoCar = car
-											color = 0xFFFFFFFF
-										end
-										renderFontDrawText(
-											font2,
-											"Hold right mouse button to teleport into the car",
-											sx,
-											sy - hoffs * 3,
-											color
-										)
-									end
-								end
-				
-								createPointMarker(pos.x, pos.y, pos.z)
-				
-								-- teleport!
-								if isKeyDown(key.VK_LBUTTON) then
-									if tpIntoCar then
-										if not jumpIntoCar(tpIntoCar) then
-											-- teleport to the car if there is no free seats
-											teleportPlayer(pos.x, pos.y, pos.z)
-										end
-									else
-										if isCharInAnyCar(playerPed) then
-											local norm = Vector3D(colpoint.normal[1], colpoint.normal[2], 0)
-											local norm2 = Vector3D(colpoint2.normal[1], colpoint2.normal[2], colpoint2.normal[3])
-											rotateCarAroundUpAxis(storeCarCharIsInNoSave(playerPed), norm2)
-											pos = pos - norm * 1.8
-											pos.z = pos.z - 0.8
-										end
-										teleportPlayer(pos.x, pos.y, pos.z)
-									end
-									removePointMarker()
-				
-									while isKeyDown(key.VK_LBUTTON) do
-										wait(0)
-									end
-									
-									pInfo.clickwarp = false
-									showCursor(false)
-								end
-							end
-						end
-					end
-				end	
-				
+
+				if not wInfo.spectatemenu.v then imgui.Process = wInfo.main.v else imgui.Process = true end -- Close the window 
+
 				local oTime = os.time()
-				if pInfo.traicers and not isPauseMenuActive() then
+
+				if scriptInfo.traicers and not isPauseMenuActive() then
 					for i = 1, BulletSync.maxLines do
 						if BulletSync[i].enable == true and BulletSync[i].time >= oTime then
 							local sx, sy, sz = calcScreenCoors(BulletSync[i].o.x, BulletSync[i].o.y, BulletSync[i].o.z)
@@ -306,7 +157,7 @@ function main()
 				end
 
 				local time = os.clock() * 1000
-				if pInfo.airbreak then -- Аирбрейк
+				if scriptInfo.airbreak then -- Аирбрейк
 					if isCharInAnyCar(playerPed) then heading = getCarHeading(storeCarCharIsInNoSave(playerPed))
 					else heading = getCharHeading(playerPed) end
 					local camCoordX, camCoordY, camCoordZ = getActiveCameraCoordinates()
@@ -315,29 +166,29 @@ function main()
 					if isCharInAnyCar(playerPed) then difference = 0.79 else difference = 1.0 end
 					setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3] - difference)
 					if isKeyDown(key.VK_W) then
-						airBrkCoords[1] = airBrkCoords[1] + pInfo.airspeed * math.sin(-math.rad(angle))
-						airBrkCoords[2] = airBrkCoords[2] + pInfo.airspeed * math.cos(-math.rad(angle))
+						airBrkCoords[1] = airBrkCoords[1] + scriptInfo.airspeed * math.sin(-math.rad(angle))
+						airBrkCoords[2] = airBrkCoords[2] + scriptInfo.airspeed * math.cos(-math.rad(angle))
 						if not isCharInAnyCar(playerPed) then setCharHeading(playerPed, angle)
 						else setCarHeading(storeCarCharIsInNoSave(playerPed), angle) end
 					elseif isKeyDown(key.VK_S) then
-						airBrkCoords[1] = airBrkCoords[1] - pInfo.airspeed * math.sin(-math.rad(heading))
-						airBrkCoords[2] = airBrkCoords[2] - pInfo.airspeed * math.cos(-math.rad(heading))
+						airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading))
+						airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading))
 					end
 					if isKeyDown(key.VK_A) then
-						airBrkCoords[1] = airBrkCoords[1] - pInfo.airspeed * math.sin(-math.rad(heading - 90))
-						airBrkCoords[2] = airBrkCoords[2] - pInfo.airspeed * math.cos(-math.rad(heading - 90))
+						airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading - 90))
+						airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading - 90))
 					elseif isKeyDown(key.VK_D) then
-						airBrkCoords[1] = airBrkCoords[1] - pInfo.airspeed * math.sin(-math.rad(heading + 90))
-						airBrkCoords[2] = airBrkCoords[2] - pInfo.airspeed * math.cos(-math.rad(heading + 90))
+						airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading + 90))
+						airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading + 90))
 					end
-					if isKeyDown(key.VK_UP) then airBrkCoords[3] = airBrkCoords[3] + pInfo.airspeed / 2.0 end
-					if isKeyDown(key.VK_DOWN) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - pInfo.airspeed / 2.0 end
+					if isKeyDown(key.VK_UP) then airBrkCoords[3] = airBrkCoords[3] + scriptInfo.airspeed / 2.0 end
+					if isKeyDown(key.VK_DOWN) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - scriptInfo.airspeed / 2.0 end
 					if not isSampfuncsConsoleActive() and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
 						if isKeyDown(key.VK_OEM_PLUS) and time - tick.Keys.Plus > tick.Time.PlusMinus then
-							if pInfo.airspeed < 14.9 then pInfo.airspeed = pInfo.airspeed + 0.5 end
+							if scriptInfo.airspeed < 14.9 then scriptInfo.airspeed = scriptInfo.airspeed + 0.5 end
 							tick.Keys.Plus = time
 						elseif isKeyDown(key.VK_OEM_MINUS) and time - tick.Keys.Minus > tick.Time.PlusMinus then
-							if pInfo.airspeed > 0.5 then pInfo.airspeed = pInfo.airspeed - 0.5 end
+							if scriptInfo.airspeed > 0.5 then scriptInfo.airspeed = scriptInfo.airspeed - 0.5 end
 							tick.Keys.Minus = time
 						end
 					end
@@ -345,28 +196,93 @@ function main()
 					setCharProofs(playerPed, true, true, true, true, true)
 					writeMemory(0x96916E, 1, 1, false)
 				end
-			end
 
-			if res then
-				sampDisconnectWithReason(quit)
+				if scriptInfo.clickwarp then
+					local mode = sampGetCursorMode()
+					if mode == 0 then
+					showCursor(true)
+					end
+					local sx, sy = getCursorPos()
+					local sw, sh = getScreenResolution()
+					-- is cursor in game window bounds?
+					if sx >= 0 and sy >= 0 and sx < sw and sy < sh then
+						local posX, posY, posZ = convertScreenCoordsToWorld3D(sx, sy, 700.0)
+						local camX, camY, camZ = getActiveCameraCoordinates()
+						-- search for the collision point
+						local result, colpoint = processLineOfSight(camX, camY, camZ, posX, posY, posZ, true, true, false, true, false, false, false)
+						
+						if result and colpoint.entity ~= 0 then
+							local normal = colpoint.normal
+							local pos = Vector3D(colpoint.pos[1], colpoint.pos[2], colpoint.pos[3]) - (Vector3D(normal[1], normal[2], normal[3]) * 0.1)
+							local zOffset = 300
+							if normal[3] >= 0.5 then zOffset = 1 end
+							-- search for the ground position vertically down
+							local result, colpoint2 = processLineOfSight(pos.x, pos.y, pos.z + zOffset, pos.x, pos.y, pos.z - 0.3,
+							true, true, false, true, false, false, false)
 
-				if time ~= nil then
-					wait(time*1000)
-				else 
-					wait(2000)
+							if result then
+								pos = Vector3D(colpoint2.pos[1], colpoint2.pos[2], colpoint2.pos[3] + 1)
+					
+								local curX, curY, curZ  = getCharCoordinates(playerPed)
+								local dist              = getDistanceBetweenCoords3d(curX, curY, curZ, pos.x, pos.y, pos.z)
+								local hoffs             = renderGetFontDrawHeight(font)
+					
+								sy = sy - 2
+								sx = sx - 2
+								renderFontDrawText(font, string.format("%0.2fm", dist), sx, sy - hoffs, 0xEEEEEEEE)
+
+								local tpIntoCar = nil
+								if colpoint.entityType == 2 then
+									local car = getVehiclePointerHandle(colpoint.entity)
+									if doesVehicleExist(car) and (not isCharInAnyCar(playerPed) or storeCarCharIsInNoSave(playerPed) ~= car) then
+										displayVehicleName(sx, sy - hoffs * 2, getNameOfVehicleModel(getCarModel(car)))
+										local color = 0xAAFFFFFF
+										if isKeyDown(VK_RBUTTON) then
+										tpIntoCar = car
+										color = 0xFFFFFFFF
+										end
+										renderFontDrawText(font2, "Hold right mouse button to teleport into the car", sx, sy - hoffs * 3, color)
+									end
+								end
+
+								createPointMarker(pos.x, pos.y, pos.z)
+
+								-- teleport!
+								if isKeyDown(keyApply) then
+									if tpIntoCar then
+									if not jumpIntoCar(tpIntoCar) then
+										-- teleport to the car if there is no free seats
+										teleportPlayer(pos.x, pos.y, pos.z)
+									end
+									else
+									if isCharInAnyCar(playerPed) then
+										local norm = Vector3D(colpoint.normal[1], colpoint.normal[2], 0)
+										local norm2 = Vector3D(colpoint2.normal[1], colpoint2.normal[2], colpoint2.normal[3])
+										rotateCarAroundUpAxis(storeCarCharIsInNoSave(playerPed), norm2)
+										pos = pos - norm * 1.8
+										pos.z = pos.z - 0.8
+									end
+									teleportPlayer(pos.x, pos.y, pos.z)
+									end
+
+									removePointMarker()
+					
+									while isKeyDown(keyApply) do wait(0) end
+									showCursor(false)
+								end
+							end
+						end
+					end
 				end
-
-				sampSetGamestate(1)
-				res = false
 			end
 
-			wait(0)
 			removePointMarker()
+			wait(0)
 		end
 	end
 end
 
--- Downloading packages
+-- Search:: Packages
 function r_smart_lib_imgui()
     if not pcall(function() imgui = require 'imgui' end) then
       	waiter = true
@@ -419,28 +335,31 @@ function r_smart_lib_imgui()
     while waiter do wait(100) end
 end
 
--- Initizalize
+-- Search:: Initizalize
 function initializeRender()
 	font = renderCreateFont("Tahoma", 10, FCR_BOLD + FCR_BORDER)
 	font2 = renderCreateFont("Arial", 8, FCR_ITALICS + FCR_BORDER)
 end
 
 function imgui_init()
-	ckWallhack = imgui.ImBool(mainIni.functions.wallhack)
-	ckTraicers = imgui.ImBool(mainIni.functions.traicers)
-	ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
-	ckOffReconAlert = imgui.ImBool(mainIni.settings.offReconAlert)
-	ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
-
+	-- Search:: Text buffers
 	temp_buffers = {
 		password = imgui.ImBuffer(mainIni.settings.password, 256),
 		sethp = imgui.ImBuffer(4)
 	}
 
-	if ckWallhack.v then 
-		nameTagOn() 
-	end
-
+	-- Search:: Variables functions
+	ckAirSpeed = imgui.ImFloat(scriptInfo.airspeed)
+	ckAirBreak = imgui.ImBool(false)
+	ckClickWarp = imgui.ImBool(mainIni.set.clickwarp)
+	ckWallhack = imgui.ImBool(mainIni.set.wallhack)
+	ckTraicers = imgui.ImBool(mainIni.set.traicers)
+  
+  	-- Search:: Variables settings
+	ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
+	ckOffReconAlert = imgui.ImBool(mainIni.settings.offReconAlert)
+ 	ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
+  
 	apply_custom_style()
 
 	function imgui.TextQuestion(text)
@@ -452,580 +371,423 @@ function imgui_init()
 			imgui.PopTextWrapPos()
 			imgui.EndTooltip()
 		end
-	end
+    end
+    
+    wInfo = {
+        main = imgui.ImBool(false),
+        func = imgui.ImBool(false),
+        stats = imgui.ImBool(false),
+        settings = imgui.ImBool(false),
+        info = imgui.ImBool(false),
+        teleport = imgui.ImBool(false),
+        spectatemenu = imgui.ImBool(false)
+    }
 
 	function imgui.OnDrawFrame()
-		ScreenX, ScreenY = getScreenResolution()
-
-		if wInfo.spectatemenu and recInfo.id ~= -1 and not recInfo.loading and sampIsPlayerConnected(recInfo.id) then
-			if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
-				imgui.ShowCursor = false
-			end
-
-			if ScreenY == 1080 then
-				imgui.SetNextWindowPos(imgui.ImVec2(1550, ScreenY - 200), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-			elseif ScreenY == 600 then 
-				imgui.SetNextWindowPos(imgui.ImVec2(600, ScreenY - 200), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-			elseif ScreenY == 1024 then
-				imgui.SetNextWindowPos(imgui.ImVec2(1150, ScreenY - 200), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-			elseif ScreenY == 768 then
-				imgui.SetNextWindowPos(imgui.ImVec2(1000, ScreenY - 200), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-			elseif ScreenY == 900 then
-				imgui.SetNextWindowPos(imgui.ImVec2(1080, ScreenY - 200), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-			end
-
-			imgui.Begin(sampGetPlayerNickname(recInfo.id), wInfo.spectatemenu, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
-
-			local result, ped = sampGetCharHandleBySampPlayerId(recInfo.id)
-
-			if result then
-				imgui.Text(string.format(u8"Skin: %d", getCharModel(ped)))
-				imgui.SameLine()
-
-				if isCharInAnyCar(ped) then
-					local vehicleId = storeCarCharIsInNoSave(ped)
-
-					imgui.Text(string.format(u8"Ping: %d", sampGetPlayerPing(recInfo.id)))
-					imgui.SameLine()
-					imgui.Text(string.format(u8"Armour: %d", sampGetPlayerArmor(recInfo.id)))
-					imgui.Text(string.format(u8"HP: %d", getCarHealth(vehicleId)))
-					imgui.SameLine()
-					imgui.Text(string.format(u8"Speed: %f", getCarSpeed(vehicleId) * 2.8))
-					imgui.SameLine()
-					imgui.Text(string.format(u8"Model: %s", getNameOfVehicleModel(getCarModel(vehicleId))))
-					imgui.SameLine()
-					imgui.Text(string.format(u8"Engine: %s", isCarEngineOn(vehicleId)))
-				else
-					imgui.Text(string.format(u8"HP: %d", sampGetPlayerHealth(recInfo.id)))
-					imgui.SameLine()
-					imgui.Text(string.format(u8"Ping: %d", sampGetPlayerPing(recInfo.id)))
-					imgui.Text(string.format(u8"Armour: %d", sampGetPlayerArmor(recInfo.id)))
-					imgui.SameLine()
-					imgui.Text(string.format(u8"Speed: %f", getCharSpeed(ped)))
-				end
-
-				if imgui.Button(u8'Next') then
-					if recInfo.id == sampGetMaxPlayerId(false) then
-						sampAddChatMessage("[Admin Tools]:{FFFFFF} Следующий игрок не найден.", 0xffa500)
-					else 
-						for i = recInfo.id, sampGetMaxPlayerId(false) do
-							if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
-								sampSendChat(string.format("/re %d", i))
-								break
-							end
-						end
-					end
-				end
-				imgui.SameLine()
-
-				if imgui.Button(u8'Previous') then
-					local find = false
-
-					if recInfo.id == 0 then
-						sampAddChatMessage("[Admin Tools]:{FFFFFF} Предыдущий игрок не найден.", 0xffa500)
-					else 
-						for i = recInfo.id, 0, -1 do
-							if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
-								find = true
-								sampSendChat(string.format("/re %d", i))
-								break
-							end
-						end
-
-						if not find then
-							sampAddChatMessage("[Admin Tools]:{FFFFFF} Предыдущий игрок не найден.", 0xffa500)
-						end
-					end
-				end
-				imgui.SameLine()
-
-				if imgui.Button(u8'Spawn') then
-					sampSendChat(string.format("/spawn %d", recInfo.id))
-				end
-				imgui.SameLine()
-				
-				if imgui.Button(u8'Вы тут?') then
-					sampSendChat(string.format("/ans %d Вы тут? Ответьте в /b.", recInfo.id))
-				end
-				imgui.SameLine()
-				
-				if imgui.Button(u8'Не прыгайте') then
-					sampSendChat(string.format("/ans %d Не прыгайте.", recInfo.id))
-				end
-
-				if imgui.Button(u8'/aheal') then
-					sampSendChat(string.format("/aheal %d", recInfo.id))
-				end
-				imgui.SameLine()
-
-				if imgui.Button(u8'/sethp') then
-					sampSendChat(string.format("/sethp %d %d", recInfo.id, tonumber(temp_buffers.sethp.v)))
-				end
-
-				imgui.SameLine()
-				imgui.PushItemWidth(35)
-				imgui.InputText(u8"##", temp_buffers.sethp)
-				imgui.PopItemWidth()
-
-				if isCharInAnyCar(ped) then
-					imgui.SameLine()
-
-					if imgui.Button(u8'/afixcar') then
-						local _, id = sampGetVehicleIdByCarHandle(storeCarCharIsInNoSave(ped))
-						sampSendChat(string.format("/afixcar %d", id))
-					end
-				end
-			else
-				imgui.Text(u8'Загрузка...')
-			end
-
-			imgui.End()
-		end
-
-		if wInfo.main then 
-			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-			imgui.Begin(u8'Admin tools', wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
-
-			if imgui.Button(u8'Функции',imgui.ImVec2(310,25)) then
-				wInfo.main = false
-				wInfo.func = true
-			elseif imgui.Button(u8'Статистика',imgui.ImVec2(310,25)) then 
-				wInfo.main = false
-				wInfo.stats = true
-			elseif imgui.Button(u8'Телепорт-лист',imgui.ImVec2(310,25)) then 
-				wInfo.teleport = true
-				wInfo.main = false
-			elseif imgui.Button(u8'О скрипте',imgui.ImVec2(310,25)) then 
-				wInfo.main = false
-				wInfo.info = true
-			elseif imgui.Button(u8'Проверить обновления', imgui.ImVec2(310, 25)) then
-				autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", '['..string.upper(thisScript().name)..']: ', "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
-			end
-
-			imgui.End()
-		elseif wInfo.stats then
-			local _, playerid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-
-			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-			imgui.Begin(string.format(u8'Статистика %s', sampGetPlayerNickname(playerid)), wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
-
-			imgui.Text(string.format(u8"Текущая сессия: %s", secToTime(pInfo.session_time)))
-			imgui.Text(string.format(u8"Реальный онлайн: %s", secToTime(mainIni.dayOnline.real)))
-			imgui.Text(string.format(u8"Время проведённое в AFK: %s", secToTime(mainIni.dayOnline.afk)))
-
-			imgui.Text(string.format(u8"Выдано блокировок чата: %d", mainIni.punishments.mute))
-			imgui.Text(string.format(u8"Выдано джайлов: %d", mainIni.punishments.jail))
-			imgui.Text(string.format(u8"Отключено игроков: %d", mainIni.punishments.kick))
-
-			if imgui.Button(u8'Назад',imgui.ImVec2(250,25)) then
-				wInfo.stats = false
-				wInfo.main = true
-			end
-
-			imgui.End()	
-		elseif wInfo.info then
-			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2 , ScreenY / 2), imgui.Cond.FirsUseEver, imgui.ImVec2(0.5, 0.5))
-			imgui.Begin(u8"Информация о скрипте", wInfo.info, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
-			if imgui.Button(u8'Связь с автором',imgui.ImVec2(310,25)) then
-				os.execute('start https://vk.com/unknownus3r')
-			end
-			imgui.SetCursorPosX((imgui.GetWindowWidth() - 70) / 2)
-			imgui.Text(u8'Автор: taichi')
-			imgui.SetCursorPosX((imgui.GetWindowWidth() - 100) / 2)
-			imgui.Text(u8'Текущая версия скрипта: ' .. thisScript().version)
-			if imgui.Button(u8'Назад',imgui.ImVec2(310,25)) then
-				wInfo.info = false
-				wInfo.main = true
-			end
-			imgui.End()
-		elseif wInfo.func then
-			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2 , ScreenY / 2), imgui.Cond.FirsUseEver, imgui.ImVec2(0.5, 0.5))
-			imgui.Begin(u8"Функции скрипта", wInfo.info, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
-
-			imgui.TextQuestion(u8"Автоматически вводит пароль при входе на сервере")
-			imgui.SameLine()
-			
-			if imgui.Checkbox(u8'Авто-логин', ckAutoLogin) then
-				mainIni.settings.autologin = ckAutoLogin.v
-				inicfg.save(mainIni, "admintools.ini")
-			end
-
-			if ckAutoLogin then
-				imgui.SameLine()
-
-				if pInfo.showpass then
-					if imgui.InputText(u8'##', temp_buffers.password) then
-						mainIni.settings.password = temp_buffers.password.v
-						inicfg.save(mainIni, "admintools.ini")
-					end
-
-					imgui.SameLine()
-					if imgui.Button(u8"Скрыть пароль") then
-						pInfo.showpass = not pInfo.showpass
-					end
-				else
-					if imgui.InputText(u8'##', temp_buffers.password, imgui.InputTextFlags.Password) then
-						mainIni.settings.password = temp_buffers.password.v
-						inicfg.save(mainIni, "admintools.ini")
-					end
-
-					imgui.SameLine()
-					if imgui.Button(u8"Показать пароль") then
-						pInfo.showpass = not pInfo.showpass
-					end
-				end
-			end
-
-			imgui.TextQuestion(u8"Автоматически вводит /aduty при успешной авторизации в аккаунт")
-			imgui.SameLine()
-
-			if imgui.Checkbox(u8'Авто /aduty', ckAutoAduty) then
-				mainIni.settings.autoAduty = ckAutoAduty.v
-				inicfg.save(mainIni, "admintools.ini")
-			end
-
-			imgui.TextQuestion(u8"Убирает строку о начале слежки за игроком от другого администратора")
-			imgui.SameLine()
-
-			if imgui.Checkbox(u8'Отключение оповещения о начале слежки', ckOffReconAlert) then
-				mainIni.settings.offReconAlert = ckOffReconAlert.v
-				inicfg.save(mainIni, "admintools.ini")
-			end
-
-			imgui.TextQuestion(u8"Позволяет видеть игроков сквозь стены")
-			imgui.SameLine()
-			
-			if imgui.Checkbox("Wall Hack", ckWallhack) then
-				mainIni.functions.wallhack = ckWallhack.v
-				inicfg.save(mainIni, "admintools.ini")
-				if ckWallhack.v then nameTagOn() else nameTagOff() end
-			end
-		
-			imgui.TextQuestion(u8"Позволяет видеть трейсера пуль того игрока, за которым вы следите")
-			imgui.SameLine()
-
-			if imgui.Checkbox(u8"Трейсеры пуль", ckTraicers) then 
-				mainIni.functions.traicers = ckTraicers.v 
-				inicfg.save(mainIni, "admintools.ini")
-			end
-
-			imgui.TextQuestion(u8"Простая очистка чата")
-			imgui.SameLine()
-
-			if imgui.Button(u8'Очистить чат') then 
-				ClearChat() 
-			end
-
-			if imgui.Button(u8'Назад',imgui.ImVec2(490,25)) then
-				wInfo.func = false
-				wInfo.main = true
-			end
-
-			imgui.End()
-		elseif wInfo.teleport then
-			imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-			imgui.SetNextWindowSize(imgui.ImVec2(300, 200), imgui.Cond.FirstUseEver)
-			imgui.Begin(u8'Телепорт-меню', wInfo.teleport, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
-
-			if imgui.BeginMenu(u8'Важные места') then
-				if imgui.MenuItem(u8'Мэрия') then teleportPlayer(1481.1948,-1742.2594,13.5469)
-				elseif imgui.MenuItem(u8'Spawn') then teleportPlayer(1716.4712,-1900.9441,13.5662)
-				elseif imgui.MenuItem(u8'Банк') then teleportPlayer(591.5851,-1243.9316,17.9945)
-				elseif imgui.MenuItem(u8'Автосалон') then teleportPlayer(553.4409,-1284.4994,17.2482)
-				elseif imgui.MenuItem(u8'Мотосалон') then teleportPlayer(2128.8518,-1142.8802,24.9510)
-				elseif imgui.MenuItem(u8'Департамент транспорта') then teleportPlayer(738.8824,-1412.5363,13.5287)
-				elseif imgui.MenuItem(u8'Торговый центр Mall') then teleportPlayer(1136.7538,-1443.1121,15.7969) end
-
-				imgui.EndMenu()
-			end
-
-			if imgui.BeginMenu(u8'Организации') then
-				if imgui.MenuItem(u8'Пресса') then teleportPlayer(644.4466,-1359.8496,13.5839)
-				elseif imgui.MenuItem(u8'LSFD') then teleportPlayer(1337.7219,-864.5389,39.3089)
-				elseif imgui.MenuItem(u8'LSPD') then teleportPlayer(1337.7219,-864.5389,39.3089)
-				elseif imgui.MenuItem(u8'54 станция') then teleportPlayer(1541.9823,-1674.7384,13.5536)
-				elseif imgui.MenuItem(u8'LSFD') then teleportPlayer(2317.1174,-1341.3965,24.0152)
-				elseif imgui.MenuItem(u8'LSSD') then teleportPlayer(633.9006,-571.9080,16.3359)
-				elseif imgui.MenuItem(u8'LSHS') then teleportPlayer(1813.4537,-1347.5161,15.0655) end
-
-				imgui.EndMenu()
-			end
-
-			if imgui.BeginMenu(u8'Города') then
-				if imgui.MenuItem(u8'Лос-Сантос') then teleportPlayer(1437.3413,-1358.1964,35.9609)
-				elseif imgui.MenuItem(u8'Сан-Фиерро') then teleportPlayer(-2088.7825,541.0121,79.1693)
-				elseif imgui.MenuItem(u8'Лас-Вентурас') then teleportPlayer(2028.8269,1371.3090,10.8130) end
-
-				imgui.EndMenu()
-			end
-
-			if imgui.Button(u8'Назад',imgui.ImVec2(310,25)) then
-				wInfo.teleport = false
-				wInfo.main = true
-			end
-
-			imgui.End()
-		end
+        if wInfo.main.v then drawMain() end
+        if wInfo.info.v then drawInfo() end
+        if wInfo.teleport.v then drawTeleport() end
+		if wInfo.func.v then drawFunctions() end
+		if wInfo.spectatemenu.v then drawSpectateMenu() end
     end
 end
 
--- Imgui settings
+-- Search:: Imgui draw windows
+function drawMain()
+    local ScreenX, ScreenY = getScreenResolution()
+
+    imgui.SetNextWindowPos(imgui.ImVec2(250, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+    imgui.Begin(u8'Mailen Tools', wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+
+    if imgui.Button(u8'Функции',imgui.ImVec2(310,25)) then
+        wInfo.func.v = not wInfo.func.v
+    elseif imgui.Button(u8'Статистика',imgui.ImVec2(310,25)) then 
+	   --wInfo.stats.v = not wInfo.stats.v
+	   sampAddChatMessage("[Admin Tools]:{FFFFFF} Эта функция находится в разработке.", 0xffa500)
+    elseif imgui.Button(u8'Телепорт-лист',imgui.ImVec2(310,25)) then 
+        wInfo.teleport.v = not wInfo.teleport.v
+    elseif imgui.Button(u8'О скрипте',imgui.ImVec2(310,25)) then 
+        wInfo.info.v = not wInfo.info.v
+	end
+
+    imgui.End()
+end
+
+function drawInfo()
+    local ScreenX, ScreenY = getScreenResolution() 
+
+    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 600, ScreenY / 2 + 300), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+    imgui.Begin(u8"Информация о скрипте", wInfo.info, imgui.WindowFlags.NoResize)
+
+    if imgui.Button(u8'Связь с разработчиком',imgui.ImVec2(310,25)) then
+        os.execute('start https://vk.com/unknownus3r')
+    end
+
+    imgui.SetCursorPosX((imgui.GetWindowWidth() - 70) / 2)
+    imgui.Text(u8'Автор: taichi')
+    imgui.SetCursorPosX((imgui.GetWindowWidth() - 100) / 2)
+    imgui.Text(u8'Текущая версия скрипта: ' .. thisScript().version)
+
+    if imgui.Button(u8'Назад',imgui.ImVec2(310,25)) then
+        wInfo.info.v = false
+        wInfo.main.v = true
+    end
+
+    imgui.End()
+end
+
+function drawTeleport()
+    local ScreenX, ScreenY = getScreenResolution() 
+
+    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 565, ScreenY / 2 + 50), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+    imgui.SetNextWindowSize(imgui.ImVec2(300, 120), imgui.Cond.FirstUseEver)
+    imgui.Begin(u8'Телепорт-меню', wInfo.teleport, imgui.WindowFlags.NoResize)
+
+    if imgui.BeginMenu(u8'Важные места') then
+        if imgui.MenuItem(u8'Мэрия') then teleportPlayer(1481.1948,-1742.2594,13.5469)
+        elseif imgui.MenuItem(u8'Spawn') then teleportPlayer(1716.4712,-1900.9441,13.5662)
+        elseif imgui.MenuItem(u8'Банк') then teleportPlayer(591.5851,-1243.9316,17.9945)
+        elseif imgui.MenuItem(u8'Автосалон') then teleportPlayer(553.4409,-1284.4994,17.2482)
+        elseif imgui.MenuItem(u8'Мотосалон') then teleportPlayer(2128.8518,-1142.8802,24.9510)
+        elseif imgui.MenuItem(u8'Департамент транспорта') then teleportPlayer(738.8824,-1412.5363,13.5287)
+        elseif imgui.MenuItem(u8'Торговый центр Mall') then teleportPlayer(1136.7538,-1443.1121,15.7969) end
+
+        imgui.EndMenu()
+    end
+
+    if imgui.BeginMenu(u8'Организации') then
+        if imgui.MenuItem(u8'Пресса') then teleportPlayer(644.4466,-1359.8496,13.5839)
+        elseif imgui.MenuItem(u8'LSFD') then teleportPlayer(1337.7219,-864.5389,39.3089)
+        elseif imgui.MenuItem(u8'LSPD') then teleportPlayer(1337.7219,-864.5389,39.3089)
+        elseif imgui.MenuItem(u8'54 станция') then teleportPlayer(1541.9823,-1674.7384,13.5536)
+        elseif imgui.MenuItem(u8'LSFD') then teleportPlayer(2317.1174,-1341.3965,24.0152)
+        elseif imgui.MenuItem(u8'LSSD') then teleportPlayer(633.9006,-571.9080,16.3359)
+        elseif imgui.MenuItem(u8'LSHS') then teleportPlayer(1813.4537,-1347.5161,15.0655) end
+
+        imgui.EndMenu()
+    end
+
+    if imgui.BeginMenu(u8'Города') then
+        if imgui.MenuItem(u8'Лос-Сантос') then teleportPlayer(1437.3413,-1358.1964,35.9609)
+        elseif imgui.MenuItem(u8'Сан-Фиерро') then teleportPlayer(-2088.7825,541.0121,79.1693)
+        elseif imgui.MenuItem(u8'Лас-Вентурас') then teleportPlayer(2028.8269,1371.3090,10.8130) end
+
+        imgui.EndMenu()
+    end
+
+    imgui.End()
+end
+
+function drawFunctions() 
+  	local ScreenX, ScreenY = getScreenResolution() 
+
+  	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 1300, ScreenY - 500), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+  	imgui.Begin(u8"Функции скрипта", wInfo.func, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+	
+	imgui.Text(u8"Основные функции:")
+	imgui.Separator()
+	imgui.Text(u8"\n")
+
+  	if imgui.Checkbox(u8'Авто-логин', ckAutoLogin) then
+   	 	mainIni.settings.autologin = ckAutoLogin.v
+    	inicfg.save(mainIni, "admintools.ini")
+	end
+	  
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Автоматически вводит пароль при входе на сервере")
+
+  	if ckAutoLogin then
+		imgui.SameLine()
+
+		if wInfo.settings.showpass then
+		if imgui.InputText(u8'##', temp_buffers.password) then
+			mainIni.settings.password = temp_buffers.password.v
+			inicfg.save(mainIni, "admintools.ini")
+		end
+
+		imgui.SameLine()
+		if imgui.Button(u8"Скрыть пароль") then
+			wInfo.settings.showpass = not wInfo.settings.showpass
+		end
+		else
+		if imgui.InputText(u8'##', temp_buffers.password, imgui.InputTextFlags.Password) then
+			mainIni.settings.password = temp_buffers.password.v
+			inicfg.save(mainIni, "admintools.ini")
+		end
+
+		imgui.SameLine()
+		if imgui.Button(u8"Показать пароль") then
+			wInfo.settings.showpass = not wInfo.settings.showpass
+		end
+		end
+	end
+
+	if imgui.Checkbox(u8'Авто /aduty', ckAutoAduty) then
+		mainIni.settings.autoAduty = ckAutoAduty.v
+		inicfg.save(mainIni, "admintools.ini")
+	end
+
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Автоматически вводит /aduty при успешной авторизации в аккаунт")
+
+	if imgui.Checkbox(u8'Отключение оповещения о начале слежки', ckOffReconAlert) then
+		mainIni.settings.offReconAlert = ckOffReconAlert.v
+		inicfg.save(mainIni, "admintools.ini")
+	end
+
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Убирает строку о начале слежки за игроком от другого администратора")
+	
+	if imgui.Checkbox("Wall Hack", ckWallhack) then
+		mainIni.set.wallhack = ckWallhack.v
+		inicfg.save(mainIni, "admintools.ini")
+
+		nameTagSet(ckWallhack.v)
+	end
+
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Позволяет видеть игроков сквозь стены")
+
+	if imgui.Checkbox(u8"Трейсеры пуль в слежке", ckTraicers) then 
+		mainIni.set.traicers = ckTraicers.v 
+		inicfg.save(mainIni, "admintools.ini")
+	end
+
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Позволяет видеть трейсера пуль того игрока, за которым вы следите")
+
+	if imgui.Checkbox(u8"ТП по курсору", ckClickWarp) then 
+		mainIni.set.clickwarp = ckClickWarp.v
+		inicfg.save(mainIni, "admintools.ini")
+	end
+
+	imgui.Text(u8"\nAirBreak:")
+	imgui.Separator()
+	imgui.Text(u8"\n")
+
+	if imgui.Checkbox(u8"AirBreak", ckAirBreak) then 
+		scriptInfo.airbreak = ckAirBreak.v
+
+		if scriptInfo.airbreak then
+			local posX, posY, posZ = getCharCoordinates(playerPed)
+			airBrkCoords = {posX, posY, posZ, 0.0, 0.0, getCharHeading(playerPed)}
+		end
+	end
+
+	if imgui.SliderFloat(u8"Скорость", ckAirSpeed, 0.5, 15.0) then
+		scriptInfo.airspeed = ckAirSpeed
+	end
+
+	imgui.Text(u8"\nУправление скриптом:")
+	imgui.Separator()
+	imgui.Text(u8"\n")
+
+	if imgui.Button(u8'Перезагрузить скрипт') then
+		thisScript():reload()
+	end
+
+	imgui.End()
+end
+
+function drawSpectateMenu()
+	local ScreenX, ScreenY = getScreenResolution()
+
+	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 350, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+    imgui.Begin(string.format(u8"Spectating: %s(%d)", sampGetPlayerNickname(recInfo.id), recInfo.id), wInfo.spectatemenu, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+
+	local result, ped = sampGetCharHandleBySampPlayerId(recInfo.id)
+
+	if recInfo.loading then
+		imgui.Text(u8"Loading...")
+
+		while ped == nil do
+			wait(1000)
+		end
+
+		recInfo.loading = false
+	elseif ped ~= nil then
+		imgui.Text(u8"Stats:\n\n")
+
+		imgui.Text(u8"Health:")
+		imgui.SameLine()
+		imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t%d", sampGetPlayerHealth(recInfo.id)))
+
+		imgui.Text(u8"Armour:")
+		imgui.SameLine()
+		imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t %d", sampGetPlayerArmor(recInfo.id)))
+
+		imgui.Text(u8"Weapon:")
+		imgui.SameLine()
+		imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t%d", getCurrentCharWeapon(ped)))
+
+		imgui.Text(u8"Ping:")
+		imgui.SameLine()
+		imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t %d", sampGetPlayerPing(recInfo.id)))
+
+		imgui.Text(u8"In pause:")
+		imgui.SameLine()
+		imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t%s", sampIsPlayerPaused(recInfo.id)))
+
+		if isCharInAnyCar(ped) then
+			local vehicleId = storeCarCharIsInNoSave(ped)
+
+			imgui.Text(u8"Speed:")
+			imgui.SameLine()
+			imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t %d", getCarSpeed(vehicleId) * 2.8))
+
+			imgui.Text(u8"Vehicle health:")
+			imgui.SameLine()
+			imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t  %s", getCarHealth(vehicleId)))
+		else
+			imgui.Text(u8"Speed:")
+			imgui.SameLine()
+			imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t   %d", getCharSpeed(ped)))
+
+			imgui.Text(u8"Vehicle health:")
+			imgui.SameLine()
+			imgui.Text(u8"\t\t\t\t\t\t\t\t\t\t\t  -1")
+		end
+
+		imgui.Text(u8"\nActions:\n")
+
+		if imgui.Button(u8'<<< Previous') then
+			local find = false
+
+			if recInfo.id == 0 then
+				sampAddChatMessage("[Admin Tools]:{FFFFFF} Предыдущий игрок не найден.", 0xffa500)
+			else 
+				for i = recInfo.id, 0, -1 do
+					if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
+						find = true
+						sampSendChat(string.format("/re %d", i))
+						break
+					end
+				end
+
+				if not find then
+					sampAddChatMessage("[Admin Tools]:{FFFFFF} Предыдущий игрок не найден.", 0xffa500)
+				end
+			end
+		end
+		imgui.SameLine()
+
+		if imgui.Button(u8'Next >>>') then
+			if recInfo.id == sampGetMaxPlayerId(false) then
+				sampAddChatMessage("[Admin Tools]:{FFFFFF} Следующий игрок не найден.", 0xffa500)
+			else 
+				for i = recInfo.id, sampGetMaxPlayerId(false) do
+					if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
+						sampSendChat(string.format("/re %d", i))
+						break
+					end
+				end
+			end
+		end
+		imgui.SameLine()
+
+		if imgui.Button(u8'Spawn') then
+			sampSendChat(string.format("/spawn %d", recInfo.id))
+		end
+		imgui.SameLine()
+		
+		if imgui.Button(u8'Check AFK') then
+			sampSendChat(string.format("/ans %d Вы тут? Ответьте в /b.", recInfo.id))
+		end
+		
+		if imgui.Button(u8'Не прыгайте') then
+			sampSendChat(string.format("/ans %d Не прыгайте.", recInfo.id))
+		end
+		imgui.SameLine()
+
+		if imgui.Button(u8'/aheal') then
+			sampSendChat(string.format("/aheal %d", recInfo.id))
+		end
+		imgui.SameLine()
+
+		if imgui.Button(u8'/sethp') then
+			sampSendChat(string.format("/sethp %d %d", recInfo.id, tonumber(temp_buffers.sethp.v)))
+		end
+
+		imgui.SameLine()
+		imgui.PushItemWidth(87)
+		imgui.InputText(u8"##", temp_buffers.sethp)
+		imgui.PopItemWidth()
+
+		imgui.Text("\n")
+
+		if imgui.Button("REFRESH", imgui.ImVec2(295,25)) then
+			sampSendClickTextdraw(scriptInfo.textdraws.refreshId)
+		end
+
+		if imgui.Button("STOP", imgui.ImVec2(295,25)) then
+			sampSendChat("/re off")
+		end
+	end
+
+	imgui.End()
+end
+
+-- Search:: Imgui settings
 function apply_custom_style()
 	imgui.SwitchContext()
     local style = imgui.GetStyle()
     local colors = style.Colors
     local clr = imgui.Col
     local ImVec4 = imgui.ImVec4
-    local ImVec2 = imgui.ImVec2
 
-    style.WindowPadding = ImVec2(15, 15)
-    style.WindowRounding = 5.0
-    style.FramePadding = ImVec2(5, 5)
-    style.FrameRounding = 4.0
-    style.ItemSpacing = ImVec2(12, 8)
-    style.ItemInnerSpacing = ImVec2(8, 6)
-    style.IndentSpacing = 25.0
-    style.ScrollbarSize = 15.0
-    style.ScrollbarRounding = 9.0
-    style.GrabMinSize = 5.0
-    style.GrabRounding = 3.0
+    style.WindowRounding = 2.0
+	style.WindowTitleAlign = imgui.ImVec2(0.5, 0.84)
+	style.ChildWindowRounding = 2.0
+	style.FrameRounding = 2.0
+	style.ItemSpacing = imgui.ImVec2(5.0, 4.0)
+	style.ScrollbarSize = 13.0
+	style.ScrollbarRounding = 0
+	style.GrabMinSize = 8.0
+	style.GrabRounding = 1.0
 
-    colors[clr.Text] = ImVec4(0.80, 0.80, 0.83, 1.00)
-    colors[clr.TextDisabled] = ImVec4(0.24, 0.23, 0.29, 1.00)
-    colors[clr.WindowBg] = ImVec4(0.06, 0.05, 0.07, 1.00)
-	colors[clr.ChildWindowBg] = ImVec4(0.07, 0.07, 0.09, 1.00)
-    colors[clr.PopupBg] = ImVec4(0.07, 0.07, 0.09, 1.00)
-    colors[clr.Border] = ImVec4(0.80, 0.80, 0.83, 0.88)
-    colors[clr.BorderShadow] = ImVec4(0.92, 0.91, 0.88, 0.00)
-    colors[clr.FrameBg] = ImVec4(0.10, 0.09, 0.12, 1.00)
-    colors[clr.FrameBgHovered] = ImVec4(0.24, 0.23, 0.29, 1.00)
-    colors[clr.FrameBgActive] = ImVec4(0.56, 0.56, 0.58, 1.00)
-    colors[clr.TitleBg] = ImVec4(0.10, 0.09, 0.12, 1.00)
-    colors[clr.TitleBgCollapsed] = ImVec4(1.00, 0.98, 0.95, 0.75)
-    colors[clr.TitleBgActive] = ImVec4(0.07, 0.07, 0.09, 1.00)
-    colors[clr.MenuBarBg] = ImVec4(0.10, 0.09, 0.12, 1.00)
-    colors[clr.ScrollbarBg] = ImVec4(0.10, 0.09, 0.12, 1.00)
-    colors[clr.ScrollbarGrab] = ImVec4(0.80, 0.80, 0.83, 0.31)
-    colors[clr.ScrollbarGrabHovered] = ImVec4(0.56, 0.56, 0.58, 1.00)
-    colors[clr.ScrollbarGrabActive] = ImVec4(0.06, 0.05, 0.07, 1.00)
-    colors[clr.ComboBg] = ImVec4(0.19, 0.18, 0.21, 1.00)
-    colors[clr.CheckMark] = ImVec4(0.80, 0.80, 0.83, 0.31)
-    colors[clr.SliderGrab] = ImVec4(0.80, 0.80, 0.83, 0.31)
-    colors[clr.SliderGrabActive] = ImVec4(0.06, 0.05, 0.07, 1.00)
-    colors[clr.Button] = ImVec4(0.10, 0.09, 0.12, 1.00)
-    colors[clr.ButtonHovered] = ImVec4(0.24, 0.23, 0.29, 1.00)
-    colors[clr.ButtonActive] = ImVec4(0.56, 0.56, 0.58, 1.00)
-    colors[clr.Header] = ImVec4(0.10, 0.09, 0.12, 1.00)
-    colors[clr.HeaderHovered] = ImVec4(0.56, 0.56, 0.58, 1.00)
-    colors[clr.HeaderActive] = ImVec4(0.06, 0.05, 0.07, 1.00)
-    colors[clr.ResizeGrip] = ImVec4(0.00, 0.00, 0.00, 0.00)
-    colors[clr.ResizeGripHovered] = ImVec4(0.56, 0.56, 0.58, 1.00)
-    colors[clr.ResizeGripActive] = ImVec4(0.06, 0.05, 0.07, 1.00)
-    colors[clr.CloseButton] = ImVec4(0.40, 0.39, 0.38, 0.16)
-    colors[clr.CloseButtonHovered] = ImVec4(0.40, 0.39, 0.38, 0.39)
-    colors[clr.CloseButtonActive] = ImVec4(0.40, 0.39, 0.38, 1.00)
-    colors[clr.PlotLines] = ImVec4(0.40, 0.39, 0.38, 0.63)
-    colors[clr.PlotLinesHovered] = ImVec4(0.25, 1.00, 0.00, 1.00)
-    colors[clr.PlotHistogram] = ImVec4(0.40, 0.39, 0.38, 0.63)
-    colors[clr.PlotHistogramHovered] = ImVec4(0.25, 1.00, 0.00, 1.00)
-    colors[clr.TextSelectedBg] = ImVec4(0.25, 1.00, 0.00, 0.43)
-    colors[clr.ModalWindowDarkening] = ImVec4(1.00, 0.98, 0.95, 0.73)
-end
-
--- RPC
-function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-	if dialogId ~= 65535 and title:find("Ввод пароля") and ckAutoLogin and mainIni.settings.password ~= "" then
-		sampSendDialogResponse(dialogId, 1, -1, mainIni.settings.password)
-		return false
-	end
-end
-
-function sampev.onBulletSync(playerid, data)
-	if recInfo.state and tonumber(playerid) == recInfo.id and recInfo.traicers then
-		if data.target.x == -1 or data.target.y == -1 or data.target.z == -1 then
-			return true
-		end
-		BulletSync.lastId = BulletSync.lastId + 1
-		if BulletSync.lastId < 1 or BulletSync.lastId > BulletSync.maxLines then
-			BulletSync.lastId = 1
-		end
-		local id = BulletSync.lastId
-		BulletSync[id].enable = true
-		BulletSync[id].tType = data.targetType
-		BulletSync[id].time = os.time() + 15
-		BulletSync[id].o.x, BulletSync[id].o.y, BulletSync[id].o.z = data.origin.x, data.origin.y, data.origin.z
-		BulletSync[id].t.x, BulletSync[id].t.y, BulletSync[id].t.z = data.target.x, data.target.y, data.target.z
-	end
-end
-
-function sampev.onServerMessage(color, text)
-    local _, playerid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-
-	if text:find("начал слежку за") then 
-		if text:find(sampGetPlayerNickname(playerid)) or mainIni.settings.offReconAlert then 
-			return false
-		end
-	end
-
-	if text:find(sampGetPlayerNickname(playerid)) then
-		if text:find("начал дежурство") then 
-			pInfo.aduty = true 
-			setCharProofs(playerPed, true, true, true, true, true)
-			writeMemory(0x96916E, 1, 1, false)
-		elseif text:find("ушёл с дежурства") then 
-			pInfo.aduty = false 
-			setCharProofs(playerPed, false, false, false, false, false)
-		elseif text:find("выдал бан OOC чата") then
-			mainIni.punishments.mute = mainIni.punishments.mute + 1
-			inicfg.save(mainIni, "admintools")
-		elseif text:find("посадил") then
-			mainIni.punishments.jail = mainIni.punishments.jail + 1
-			inicfg.save(mainIni, "admintools")
-		elseif text:find("кикнул") then
-			mainIni.punishments.kick = mainIni.punishments.kick + 1
-			inicfg.save(mainIni, "admintools")
-		end
-	elseif text:find("Надеемся, что вы") and ckAutoAduty then
-		lua_thread.create(function() 
-			local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-
-			if sampGetPlayerColor(id) ~= 16510045 then
-				wait(1000)
-				sampSendChat('/aduty')
-			end
-		end)
-	elseif text:find("Во время слежки") then
-		recInfo.loading = false
-		recInfo.state = false
-		recInfo.lastCar = -1
-		recInfo.id = -1
-		wInfo.spectatemenu = false
-		
-		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
-			imgui.Process = false
-			imgui.ShowCursor = false
-		end
-	elseif text:find("Вы не можете следить за администратором") or text:find("Данный игрок не авторизован") then
-		if recInfo.id ~= -1 then
-			recInfo.loading = true
-			recInfo.state = true
-			recInfo.id = saveId
-
-			imgui.Process = true
-			wInfo.spectatemenu = true
-		end
-	end
-end
-
-function sampev.onShowTextDraw(textdrawId, data)
-	if data.text:find("Refresh") then tInfo.refreshId = textdrawId
-	elseif data.text:find("Exit") then tInfo.exitId = textdrawId end
-end
-
-function sampev.onSendClickTextDraw(textdrawId)
-	if textdrawId == tInfo.exitId then
-		recInfo.loading = false
-		recInfo.state = false
-		recInfo.lastCar = -1
-		recInfo.id = -1
-		wInfo.spectatemenu = false
-		
-		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
-			imgui.Process = false
-			imgui.ShowCursor = false
-		end
-	end
-end
-
-function sampev.onSpectateVehicle(vehicleId, camtype)
-	recInfo.lastCar = vehicleId
-end
-
-function sampev.onSendCommand(cmd)
-	local reId = string.match(cmd, "^%/re (%d+)")
-	if not reId then reId = string.match(cmd, "^%/sp (%d+)") end
-
-	if reId and sampIsPlayerConnected(reId) and sampGetPlayerScore(reId) == 1 then
-		if sampGetPlayerColor(reId) ~= 16510045 then
-			saveId = reId
-		end
-
-		recInfo.loading = true
-		recInfo.state = true
-		recInfo.id = tonumber(reId)
-		recInfo.lastCar = -1
-
-		imgui.Process = true
-		wInfo.spectatemenu = true
-	elseif cmd:find("/re off") or cmd:find("/sp off") then
-		recInfo.loading = false
-		recInfo.state = false
-		recInfo.lastCar = -1
-		recInfo.id = -1
-		wInfo.spectatemenu = false
-		
-		if not wInfo.main and not wInfo.teleport and not wInfo.func and not wInfo.info and not wInfo.stats then
-			imgui.Process = false
-			imgui.ShowCursor = false
-		end
-	end
-end
-
--- Custom functions
-function calcScreenCoors(fX,fY,fZ)
-	local dwM = 0xB6FA2C
-
-	local m_11 = memory.getfloat(dwM + 0*4)
-	local m_12 = memory.getfloat(dwM + 1*4)
-	local m_13 = memory.getfloat(dwM + 2*4)
-	local m_21 = memory.getfloat(dwM + 4*4)
-	local m_22 = memory.getfloat(dwM + 5*4)
-	local m_23 = memory.getfloat(dwM + 6*4)
-	local m_31 = memory.getfloat(dwM + 8*4)
-	local m_32 = memory.getfloat(dwM + 9*4)
-	local m_33 = memory.getfloat(dwM + 10*4)
-	local m_41 = memory.getfloat(dwM + 12*4)
-	local m_42 = memory.getfloat(dwM + 13*4)
-	local m_43 = memory.getfloat(dwM + 14*4)
-
-	local dwLenX = memory.read(0xC17044, 4)
-	local dwLenY = memory.read(0xC17048, 4)
-
-	frX = fZ * m_31 + fY * m_21 + fX * m_11 + m_41
-	frY = fZ * m_32 + fY * m_22 + fX * m_12 + m_42
-	frZ = fZ * m_33 + fY * m_23 + fX * m_13 + m_43
-
-	fRecip = 1.0/frZ
-	frX = frX * (fRecip * dwLenX)
-	frY = frY * (fRecip * dwLenY)
-
-    if(frX<=dwLenX and frY<=dwLenY and frZ>1)then
-        return frX, frY, frZ
-	else
-		return -1, -1, -1
-	end
-end
-
-function nameTagOn()
-	local pStSet = sampGetServerSettingsPtr()
-
-	memory.setfloat(pStSet + 39, 1488.0)
-	memory.setint8(pStSet + 47, 0)
-	memory.setint8(pStSet + 56, 1)
-end
-
-function ClearChat()
-    memory.fill(sampGetChatInfoPtr() + 306, 0x0, 25200, false)
-    setStructElement(sampGetChatInfoPtr() + 306, 25562, 4, true, false)
-    memory.write(sampGetChatInfoPtr() + 0x63DA, 1, 1, false)
-end
-
-function nameTagOff()
-	local pStSet = sampGetServerSettingsPtr()
-
-	memory.setfloat(pStSet + 39, 50.0)
-	memory.setint8(pStSet + 47, 0)
-	memory.setint8(pStSet + 56, 1)
+    colors[clr.FrameBg]                = ImVec4(0.16, 0.29, 0.48, 0.54)
+    colors[clr.FrameBgHovered]         = ImVec4(0.26, 0.59, 0.98, 0.40)
+    colors[clr.FrameBgActive]          = ImVec4(0.26, 0.59, 0.98, 0.67)
+    colors[clr.TitleBg]                = ImVec4(0.04, 0.04, 0.04, 1.00)
+    colors[clr.TitleBgActive]          = ImVec4(0.16, 0.29, 0.48, 1.00)
+    colors[clr.TitleBgCollapsed]       = ImVec4(0.00, 0.00, 0.00, 0.51)
+    colors[clr.CheckMark]              = ImVec4(0.26, 0.59, 0.98, 1.00)
+    colors[clr.SliderGrab]             = ImVec4(0.24, 0.52, 0.88, 1.00)
+    colors[clr.SliderGrabActive]       = ImVec4(0.26, 0.59, 0.98, 1.00)
+    colors[clr.Button]                 = ImVec4(0.26, 0.59, 0.98, 0.40)
+    colors[clr.ButtonHovered]          = ImVec4(0.26, 0.59, 0.98, 1.00)
+    colors[clr.ButtonActive]           = ImVec4(0.06, 0.53, 0.98, 1.00)
+    colors[clr.Header]                 = ImVec4(0.26, 0.59, 0.98, 0.31)
+    colors[clr.HeaderHovered]          = ImVec4(0.26, 0.59, 0.98, 0.80)
+    colors[clr.HeaderActive]           = ImVec4(0.26, 0.59, 0.98, 1.00)
+    colors[clr.Separator]              = colors[clr.Border]
+    colors[clr.SeparatorHovered]       = ImVec4(0.26, 0.59, 0.98, 0.78)
+    colors[clr.SeparatorActive]        = ImVec4(0.26, 0.59, 0.98, 1.00)
+    colors[clr.ResizeGrip]             = ImVec4(0.26, 0.59, 0.98, 0.25)
+    colors[clr.ResizeGripHovered]      = ImVec4(0.26, 0.59, 0.98, 0.67)
+    colors[clr.ResizeGripActive]       = ImVec4(0.26, 0.59, 0.98, 0.95)
+    colors[clr.TextSelectedBg]         = ImVec4(0.26, 0.59, 0.98, 0.35)
+    colors[clr.Text]                   = ImVec4(1.00, 1.00, 1.00, 1.00)
+    colors[clr.TextDisabled]           = ImVec4(0.50, 0.50, 0.50, 1.00)
+    colors[clr.WindowBg]               = ImVec4(0.06, 0.06, 0.06, 0.94)
+    colors[clr.ChildWindowBg]          = ImVec4(1.00, 1.00, 1.00, 0.00)
+    colors[clr.PopupBg]                = ImVec4(0.08, 0.08, 0.08, 0.94)
+    colors[clr.ComboBg]                = colors[clr.PopupBg]
+    colors[clr.Border]                 = ImVec4(0.43, 0.43, 0.50, 0.50)
+    colors[clr.BorderShadow]           = ImVec4(0.00, 0.00, 0.00, 0.00)
+    colors[clr.MenuBarBg]              = ImVec4(0.14, 0.14, 0.14, 1.00)
+    colors[clr.ScrollbarBg]            = ImVec4(0.02, 0.02, 0.02, 0.53)
+    colors[clr.ScrollbarGrab]          = ImVec4(0.31, 0.31, 0.31, 1.00)
+    colors[clr.ScrollbarGrabHovered]   = ImVec4(0.41, 0.41, 0.41, 1.00)
+    colors[clr.ScrollbarGrabActive]    = ImVec4(0.51, 0.51, 0.51, 1.00)
+    colors[clr.CloseButton]            = ImVec4(0.41, 0.41, 0.41, 0.50)
+    colors[clr.CloseButtonHovered]     = ImVec4(0.98, 0.39, 0.36, 1.00)
+    colors[clr.CloseButtonActive]      = ImVec4(0.98, 0.39, 0.36, 1.00)
+    colors[clr.PlotLines]              = ImVec4(0.61, 0.61, 0.61, 1.00)
+    colors[clr.PlotLinesHovered]       = ImVec4(1.00, 0.43, 0.35, 1.00)
+    colors[clr.PlotHistogram]          = ImVec4(0.90, 0.70, 0.00, 1.00)
+    colors[clr.PlotHistogramHovered]   = ImVec4(1.00, 0.60, 0.00, 1.00)
+    colors[clr.ModalWindowDarkening]   = ImVec4(0.80, 0.80, 0.80, 0.35)
 end
 
 function getDistanceToPlayer(playerId)
@@ -1040,7 +802,17 @@ function getDistanceToPlayer(playerId)
 	return -1
 end
 
--- Click warp functions
+function showCursor(toggle)
+	if toggle then
+		sampSetCursorMode(CMODE_LOCKCAM)
+	else
+		sampToggleCursor(false)
+	end
+
+	cursorEnabled = toggle
+end 
+
+-- Search:: Clickwarp functions
 function rotateCarAroundUpAxis(car, vec)
 	local mat = Matrix3X3(getVehicleRotationMatrix(car))
 	local rotAxis = Vector3D(mat.up:get())
@@ -1178,135 +950,184 @@ function setEntityCoordinates(entityPtr, x, y, z)
 	if entityPtr ~= 0 then
 		local matrixPtr = readMemory(entityPtr + 0x14, 4, false)
 		if matrixPtr ~= 0 then
-		local posPtr = matrixPtr + 0x30
-		writeMemory(posPtr + 0, 4, representFloatAsInt(x), false) -- X
-		writeMemory(posPtr + 4, 4, representFloatAsInt(y), false) -- Y
-		writeMemory(posPtr + 8, 4, representFloatAsInt(z), false) -- Z
+            local posPtr = matrixPtr + 0x30
+            writeMemory(posPtr + 0, 4, representFloatAsInt(x), false) -- X
+            writeMemory(posPtr + 4, 4, representFloatAsInt(y), false) -- Y
+            writeMemory(posPtr + 8, 4, representFloatAsInt(z), false) -- Z
 		end
 	end
 end
 
-function showCursor(toggle)
-	if toggle then
-		sampSetCursorMode(CMODE_LOCKCAM)
-	else
-		sampToggleCursor(false)
+-- Search:: Custom functions
+function nameTagSet(arg)
+  local pStSet = sampGetServerSettingsPtr()
+
+  if arg then
+	  memory.setfloat(pStSet + 39, 1488.0)
+	  memory.setint8(pStSet + 47, 0)
+    memory.setint8(pStSet + 56, 1)
+  else
+    memory.setfloat(pStSet + 39, 50.0)
+	  memory.setint8(pStSet + 47, 0)
+	  memory.setint8(pStSet + 56, 1)
+  end
+end
+
+function ClearChat()
+    memory.fill(sampGetChatInfoPtr() + 306, 0x0, 25200, false)
+    setStructElement(sampGetChatInfoPtr() + 306, 25562, 4, true, false)
+    memory.write(sampGetChatInfoPtr() + 0x63DA, 1, 1, false)
+end
+
+-- Search:: SA:MP Events
+function sampev.onShowTextDraw(textdrawId, data)
+	if data.text:find("Refresh") then 
+		scriptInfo.textdraws.refreshId = textdrawId
+		recInfo.loading = true
+
+		wInfo.spectatemenu.v = true
+		wInfo.info.v = false
+
+		imgui.Process = true
+		imgui.ShowCursor = false
+	elseif data.text:find("Exit") then scriptInfo.textdraws.exitId = textdrawId end
+end
+
+function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
+	if dialogId ~= 65535 and title:find("Ввод пароля") and ckAutoLogin and mainIni.settings.password ~= "" then
+		sampSendDialogResponse(dialogId, 1, -1, mainIni.settings.password)
+		return false
 	end
+end
 
-	cursorEnabled = toggle
-end  
-
-function onScriptTerminate(script, quitGame)
-	if script == thisScript() then
-		if not doesDirectoryExist("moonloader\\config") then
-			createDirectory("moonloader\\config")
+function sampev.onBulletSync(playerid, data)
+	if recInfo.state and tonumber(playerid) == recInfo.id and recInfo.traicers then
+		if data.target.x == -1 or data.target.y == -1 or data.target.z == -1 then
+			return true
 		end
-
-		inicfg.save(mainIni, "admintools")
-	end
-end
-
-function reconnect(param)
-	time = tonumber(param)
-	res = true
-end
-
-function secToTime(sec)
-	local hour, minute, second = sec / 3600, math.floor(sec / 60), sec % 60
-	return string.format("%02d:%02d:%02d", math.floor(hour) ,  minute - (math.floor(hour) * 60), second)
-end
-
--- Custom threads
-function reconUpdate()
-	while true do
-		if recInfo.state and sampIsPlayerConnected(recInfo.id) then
-			local result, ped = sampGetCharHandleBySampPlayerId(recInfo.id)
-
-			if result then
-				recInfo.loading = false
-
-				if isCharInAnyCar(ped) then
-					local _, vehicleId = sampGetVehicleIdByCarHandle(storeCarCharIsInNoSave(ped))
-
-					if vehicleId ~= recInfo.lastCar then
-						sampSendClickTextdraw(tInfo.refreshId)
-					end
-				elseif not isCharInAnyCar(ped) then
-					print(recInfo.lastCar)
-
-					if recInfo.lastCar ~= -1 then
-						sampSendClickTextdraw(tInfo.refreshId)
-						recInfo.lastCar = -1
-					end
-				end
-
-				if not isCharInAnyHeli(ped) and not isCharInAnyPlane(ped) and getDistanceToPlayer(recInfo.id) > 35.0 or getDistanceToPlayer(recInfo.id) == -1 then
-					sampSendClickTextdraw(tInfo.refreshId)
-				end
-			else
-				wait(100)
-			end
+		BulletSync.lastId = BulletSync.lastId + 1
+		if BulletSync.lastId < 1 or BulletSync.lastId > BulletSync.maxLines then
+			BulletSync.lastId = 1
 		end
-
-		wait(0)
+		local id = BulletSync.lastId
+		BulletSync[id].enable = true
+		BulletSync[id].tType = data.targetType
+		BulletSync[id].time = os.time() + 15
+		BulletSync[id].o.x, BulletSync[id].o.y, BulletSync[id].o.z = data.origin.x, data.origin.y, data.origin.z
+		BulletSync[id].t.x, BulletSync[id].t.y, BulletSync[id].t.z = data.target.x, data.target.y, data.target.z
 	end
 end
 
-function dayOnlineTimer()
-	while true do
-		wait(1000)
+function sampev.onSendClickTextDraw(textdrawId)
+	if textdrawId == scriptInfo.textdraws.exitId then
+		wInfo.spectatemenu.v = false
+		resetSpectateInfo()
 
-		pInfo.session_time = pInfo.session_time + 1
+		if not wInfo.main.v then
+			imgui.Process = false
+		end
+	end
+end
 
-		if not isGamePaused() then
-			mainIni.dayOnline.real = mainIni.dayOnline.real + 1
+function sampev.onSpectateVehicle(vehicleId, camtype)
+	recInfo.lastCar = vehicleId
+end
+
+function sampev.onServerMessage(color, text)
+	if text:find("начал слежку за") then 
+		if text:find(sampGetPlayerNickname(scriptInfo.myId)) or mainIni.settings.offReconAlert then
+			return false 
+		end
+	elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(scriptInfo.myId) ~= 16510045 then
+		lua_thread.create(function() 
+			wait(1000)
+			sampSendChat('/aduty')
+		end)
+	elseif text:find("Во время слежки") then
+		wInfo.spectatemenu.v = false
+		resetSpectateInfo()
+		
+		if not wInfo.main.v then
+			imgui.Process = false
+		end
+	elseif text:find("Вы не можете следить за администратором") then
+		if saveId ~= nil then -- Если игрок за кем-то следил
+			recInfo.loading = true
+			recInfo.state = true
+			recInfo.id = saveId
+
+			wInfo.spectatemenu.v = true
+			wInfo.info.v = false
+
+			imgui.Process = true
 		else
-			mainIni.dayOnline.afk = mainIni.dayOnline.afk + 1
+			wInfo.spectatemenu.v = false
+			resetSpectateInfo()
+		end
+	elseif text:find("начал дежурство") then 
+		scriptInfo.aduty = true 
+	elseif text:find("ушёл с дежурства") then 
+		scriptInfo.aduty = false
+	end
+end
+
+function sampev.onSendCommand(cmd)
+	local reId = string.match(cmd, "^%/re (%d+)")
+	if reId ~= nil then
+		recInfo.loading = true
+		recInfo.id = tonumber(reId)
+	elseif cmd:find('/re off') then
+		resetSpectateInfo()
+
+		wInfo.spectatemenu.v = false
+
+		if not wInfo.main.v then
+			imgui.Process = false
 		end
 	end
 end
 
-function autoupdate(json_url, prefix, url)
+-- Search:: Spectate functions
+function resetSpectateInfo()
+	recInfo.state = false
+	recInfo.id = -1
+	recInfo.lastCar = -1
+end
+
+-- Search:: Autoupdates
+function autoupdate(json_url, url)
 	local json = getWorkingDirectory() .. '\\admin-tools.json'
 	if doesFileExist(json) then os.remove(json) end
 
-	downloadUrlToFile(json_url, json,
-		function(id, status, p1, p2)
-			if status == 58 then
-				if doesFileExist(json) then
-					local file = io.open(json, 'r')
+	downloadUrlToFile(json_url, json, function(id, status, p1, p2)
+		if status == 58 and doesFileExist(json) then
+			local file = io.open(json, 'r')
+			if file then
+				local info = decodeJson(file:read('*a'))
+				updatelink = info.updateurl
+				updateversion = info.latest
+				file:close()
+				os.remove(json)
 
-					if file then
-						local data = decodeJson(file:read('*a'))
+				if updateversion ~= thisScript().version then
+					lua_thread.create(function()
+						sampAddChatMessage(string.format("[Admin Tools]:{FFFFFF} Загружается последняя версия скрипта: %s.", updateversion), 0xffa500)
+						wait(250)							
 
-						updatelink = data.updateurl
-						updateversion = data.latest
-
-						file:close()
-						os.remove(json)
-
-						if thisScript().version ~= updateversion then
-							lua_thread.create(function()
-								sampAddChatMessage(string.format("[Admin Tools]:{FFFFFF} Загружается последняя версия скрипта: %s.", updateversion), 0xffa500)
-								wait(250)							
-
-								downloadUrlToFile(url, thisScript().path,
-									function(id, status, p1, p2)
-										if status == 58 then
-											sampAddChatMessage(string.format("[Admin Tools]:{FFFFFF} Загрузка завершена, текущая версия скрипта: %s.", updateversion), 0xffa500)
-										end
-									end
-								)
-							end)
-						else
-							sampAddChatMessage('[Admin Tools]:{FFFFFF} Обновление скрипта не требуется, вы используете последнюю версию.', 0xffa500)
-							update = false
-						end
-					end
+						downloadUrlToFile(url, thisScript().path, function(id, status, p1, p2)
+							if status == 58 then
+								sampAddChatMessage(string.format("[Admin Tools]:{FFFFFF} Загрузка завершена, текущая версия скрипта: %s.", updateversion), 0xffa500)
+								lua_thread.create(function() wait(500) thisScript():reload() end)
+							end
+						end)
+					end)
+				else
+					sampAddChatMessage('[Admin Tools]:{FFFFFF} Обновление скрипта не требуется, вы используете последнюю версию.', 0xffa500)
+					update = false
 				end
 			end
 		end
-	)
+	end)
 
 	while update ~= false do wait(100) end
 end
