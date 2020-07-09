@@ -1117,6 +1117,7 @@ function autoupdate(json_url, url)
 						downloadUrlToFile(url, thisScript().path, function(id, status, p1, p2)
 							if status == 58 then
 								sampAddChatMessage(string.format("[Admin Tools]:{FFFFFF} Загрузка завершена, текущая версия скрипта: %s.", updateversion), 0xffa500)
+								update = false
 								lua_thread.create(function() wait(500) thisScript():reload() end)
 							end
 						end)
