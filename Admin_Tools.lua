@@ -1,4 +1,4 @@
-script_version('"0.2.2-beta')
+script_version('0.2.2-stable')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
