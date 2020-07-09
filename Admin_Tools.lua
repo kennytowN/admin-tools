@@ -1,4 +1,4 @@
-script_version('0.2.3')
+script_version('0.2.3-R2')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -592,6 +592,10 @@ function drawFunctions()
 
 	if imgui.Button(u8'Перезагрузить скрипт') then
 		thisScript():reload()
+	end
+
+	if imgui.Button(u8'Проверить обновления') then
+		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
 	end
 
 	imgui.End()
