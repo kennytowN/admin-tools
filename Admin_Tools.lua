@@ -1,4 +1,4 @@
-script_version('0.2.3-R2')
+script_version('0.2.3-R3')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -1082,9 +1082,9 @@ function sampev.onServerMessage(color, text)
 			wInfo.spectatemenu.v = false
 			resetSpectateInfo()
 		end
-	elseif text:find("начал дежурство") then 
+	elseif text:find("начал дежурство") and sampGetPlayerNickname(scriptInfo.myId) then 
 		scriptInfo.aduty = true 
-	elseif text:find("ушёл с дежурства") then 
+	elseif text:find("ушёл с дежурства") and sampGetPlayerNickname(scriptInfo.myId) then 
 		scriptInfo.aduty = false
 	end
 end
