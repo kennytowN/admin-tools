@@ -1,4 +1,4 @@
-script_version('0.2.5-R2')
+script_version('0.2.5-R3')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -102,10 +102,10 @@ function main()
 		imgui_init()
 		initializeRender()
 
-		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен, приятного использования.", 0xffa500)
+		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен. Текущая версия: " .. thisScript().version, 0xffa500)
 
 		while true do
-			if mem.read(0x8E4CB4, 4, true) > 419430400 then cleanStreamMemoryBuffer() end
+			if memory.read(0x8E4CB4, 4, true) > 419430400 then cleanStreamMemoryBuffer() end
 
 			local chatstring = sampGetChatString(99)
 			if chatstring == "Server closed the connection." or chatstring == "You are banned from this server." then
@@ -732,12 +732,6 @@ function drawFunctions()
 
 	if imgui.Button(u8'Перезагрузить скрипт') then
 		thisScript():reload()
-	end
-
-	imgui.SameLine()
-
-	if imgui.Button(u8'Проверить обновления') then
-		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
 	end
 
 	imgui.SameLine()
