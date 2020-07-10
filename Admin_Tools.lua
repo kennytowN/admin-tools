@@ -8,7 +8,7 @@ local Matrix3X3 			= require "matrix3x3"
 local Vector3D 				= require "vector3d"
 local inicfg 				= require 'inicfg'
 
-DEV_VERSION = true
+DEV_VERSION = false
 encoding.default = 'cp1251'
 u8 = encoding.UTF8
 
