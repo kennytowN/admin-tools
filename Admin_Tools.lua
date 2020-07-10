@@ -1,22 +1,15 @@
-script_version('0.2.4')
+script_version('0.2.3-R3')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
 local key	 				= require 'vkeys'
-local bitex					= require 'bitex'
 local encoding			 	= require 'encoding'
 local Matrix3X3 			= require "matrix3x3"
 local Vector3D 				= require "vector3d"
 local inicfg 				= require 'inicfg'
 
-DEV_VERSION = true
+DEV_VERSION = false
 encoding.default = 'cp1251'
-
--- DISABLE DEFAULT SA:MP SCOREBOARD (MINIFIED)
-(function()
-	patches={['SAMP_PATCH_SCOREBOARDTOGGLEON']={old_value=nil,offset=0x6AA10,value=0xC3,size=1},['SAMP_PATCH_SCOREBOARDTOGGLEONKEYLOCK']={old_value=nil,offset=0x6AD30,value=0xC3,size=1}}setmetatable(patches,{__call=function(a,b,c)if type(b)~='string'then return end;local d=a[b]if d~=nil then if type(c)~='boolean'then c=false end;local e=false;if c==false and d.old_value==nil then d.old_value=memory.getint8(sampGetBase()+d.offset,true)memory.write(sampGetBase()+d.offset,d.value,d.size,true)e=true elseif d.old_value~=nil then memory.write(sampGetBase()+d.offset,d.old_value,d.size,true)d.old_value=nil end;return e end end})
-end)()
-
 u8 = encoding.UTF8
 
 -- Search:: Script variables
@@ -34,7 +27,8 @@ local recInfo = {
 }
 
 local scriptInfo = {
-	aduty = true,
+	myId = -1,
+	aduty = false,
   	clickwarp = false,
 	airBreak = false, 
   	airspeed = 0.5,
@@ -67,6 +61,7 @@ local mainIni = inicfg.load({
 	settings = {
 		autoAduty = false,
     	autologin = false,
+    	showpass = false,
 		offReconAlert = true,
 		offHelpersAnswers = false,
 		password = ""
@@ -75,8 +70,7 @@ local mainIni = inicfg.load({
 	set = {
 		wallhack = false,
 		traicers = false,
-		clickwarp = true,
-		airbreak = true
+		clickwarp = false
 	}
 }, 'admintools')
 inicfg.save(mainIni, "admintools.ini")
@@ -95,8 +89,7 @@ function main()
 		scriptInfo.aduty = true 
 	end
 
-	patches('SAMP_PATCH_SCOREBOARDTOGGLEON')
-	patches('SAMP_PATCH_SCOREBOARDTOGGLEONKEYLOCK')
+	scriptInfo.myId = playerId
 
 	--if sampGetCurrentServerAddress() ~= "37.230.162.117" then
 	if sampGetCurrentServerAddress() ~= "95.181.158.18" then
@@ -104,22 +97,11 @@ function main()
 	else
 		r_smart_lib_imgui()
 		imgui_init()
-		imgui_addon_init()
 		initializeRender()
 
 		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен, приятного использования.", 0xffa500)
 
 		while true do
-			if wInfo.main.v or wInfo.func.v or wInfo.stats.v or wInfo.info.v or wInfo.teleport.v then
-				imgui.Process = true
-				imgui.ShowCursor = true
-			elseif wInfo.spectatemenu.v then
-				imgui.Process = true
-				imgui.ShowCursor = false
-			else
-				imgui.Process = false
-			end
-
 			if isKeyJustPressed(key.VK_F9) then -- Activate:: Main window
 				if not scriptInfo.aduty then sampSendChat("/aduty") 
 				else
@@ -129,6 +111,7 @@ function main()
 					if not wInfo.main.v then
 						wInfo.func.v = false
 						wInfo.stats.v = false
+						wInfo.settings.v = false
 						wInfo.info.v = false
 						wInfo.teleport.v = false
 					else
@@ -145,14 +128,16 @@ function main()
 					while isKeyDown(key.VK_MBUTTON) do wait(80) end
 				end
 
-				if isKeyJustPressed(key.VK_RSHIFT) and ckAirBreak.v then -- Activate:: Airbreak
+				if isKeyJustPressed(key.VK_RSHIFT) then -- Activate:: Airbreak
 					scriptInfo.airbreak = not scriptInfo.airbreak
 
 					if scriptInfo.airbreak then
 						local posX, posY, posZ = getCharCoordinates(playerPed)
 						airBrkCoords = {posX, posY, posZ, 0.0, 0.0, getCharHeading(playerPed)}
 					end
-				end 
+				end
+
+				if not wInfo.spectatemenu.v then imgui.Process = wInfo.main.v else imgui.Process = true end -- Close the window 
 
 				local oTime = os.time()
 
@@ -195,8 +180,8 @@ function main()
 						airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading + 90))
 						airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading + 90))
 					end
-					if isKeyDown(key.VK_Q) then airBrkCoords[3] = airBrkCoords[3] + scriptInfo.airspeed / 2.0 end
-					if isKeyDown(key.VK_E) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - scriptInfo.airspeed / 2.0 end
+					if isKeyDown(key.VK_UP) then airBrkCoords[3] = airBrkCoords[3] + scriptInfo.airspeed / 2.0 end
+					if isKeyDown(key.VK_DOWN) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - scriptInfo.airspeed / 2.0 end
 					if not isSampfuncsConsoleActive() and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
 						if isKeyDown(key.VK_OEM_PLUS) and time - tick.Keys.Plus > tick.Time.PlusMinus then
 							if scriptInfo.airspeed < 14.9 then scriptInfo.airspeed = scriptInfo.airspeed + 0.5 end
@@ -214,7 +199,7 @@ function main()
 				if scriptInfo.clickwarp then
 					local mode = sampGetCursorMode()
 					if mode == 0 then
-						showCursor(true)
+					showCursor(true)
 					end
 					local sx, sy = getCursorPos()
 					local sw, sh = getScreenResolution()
@@ -349,75 +334,10 @@ function r_smart_lib_imgui()
     while waiter do wait(100) end
 end
 
-
 -- Search:: Initizalize
 function initializeRender()
 	font = renderCreateFont("Tahoma", 10, FCR_BOLD + FCR_BORDER)
 	font2 = renderCreateFont("Arial", 8, FCR_ITALICS + FCR_BORDER)
-end
-
-function imgui_addon_init()
-	function imgui.ToggleButton(str_id, bool)
-		local rBool = false
-	
-		if LastActiveTime == nil then
-			LastActiveTime = {}
-		end
-		if LastActive == nil then
-			LastActive = {}
-		end
-	
-		local function ImSaturate(f)
-			return f < 0.0 and 0.0 or (f > 1.0 and 1.0 or f)
-		end
-		
-		local p = imgui.GetCursorScreenPos()
-		local draw_list = imgui.GetWindowDrawList()
-	
-		local height = imgui.GetTextLineHeightWithSpacing()
-		local width = height * 1.55
-		local radius = height * 0.50
-		local ANIM_SPEED = 0.15
-	
-		if imgui.InvisibleButton(str_id, imgui.ImVec2(width, height)) then
-			bool.v = not bool.v
-			rBool = true
-			LastActiveTime[tostring(str_id)] = os.clock()
-			LastActive[tostring(str_id)] = true
-		end
-	
-		local t = bool.v and 1.0 or 0.0
-	
-		if LastActive[tostring(str_id)] then
-			local time = os.clock() - LastActiveTime[tostring(str_id)]
-			if time <= ANIM_SPEED then
-				local t_anim = ImSaturate(time / ANIM_SPEED)
-				t = bool.v and t_anim or 1.0 - t_anim
-			else
-				LastActive[tostring(str_id)] = false
-			end
-		end
-	
-		local col_bg
-		if bool.v then
-			col_bg = imgui.GetColorU32(imgui.GetStyle().Colors[imgui.Col.FrameBgHovered])
-		else
-			col_bg = imgui.ImColor(100, 100, 100, 180):GetU32()
-		end
-	
-		draw_list:AddRectFilled(imgui.ImVec2(p.x, p.y + (height / 6)), imgui.ImVec2(p.x + width - 1.0, p.y + (height - (height / 6))), col_bg, 5.0)
-		draw_list:AddCircleFilled(imgui.ImVec2(p.x + radius + t * (width - radius * 2.0), p.y + radius), radius - 0.75, imgui.GetColorU32(bool.v and imgui.GetStyle().Colors[imgui.Col.ButtonActive] or imgui.ImColor(150, 150, 150, 255):GetVec4()))
-	
-		return rBool
-	end
-
-	function imgui.DrawToggleButtonRight(label, v)
-		local width = imgui.GetWindowWidth()
-		local calc = imgui.CalcTextSize(u8(label))
-		imgui.SetCursorPosX(width - calc.x - 50)
-
-		imgui.ToggleButton(u8(label), v)
-	end
 end
 
 function imgui_init()
@@ -429,81 +349,18 @@ function imgui_init()
 
 	-- Search:: Variables functions
 	ckAirSpeed = imgui.ImFloat(scriptInfo.airspeed)
-	ckAirBreak = imgui.ImBool(mainIni.set.airbreak)
+	ckAirBreak = imgui.ImBool(false)
 	ckClickWarp = imgui.ImBool(mainIni.set.clickwarp)
 	ckWallhack = imgui.ImBool(mainIni.set.wallhack)
 	ckTraicers = imgui.ImBool(mainIni.set.traicers)
   
-	-- Search:: Variables settings
-	ckChangeAirSpeed = imgui.ImBool(false)
+  	-- Search:: Variables settings
 	ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
 	ckOffHelpersAnswers = imgui.ImBool(mainIni.settings.offHelpersAnswers)
 	ckOffReconAlert = imgui.ImBool(mainIni.settings.offReconAlert)
  	ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
   
 	apply_custom_style()
-
-	function imgui.TextFloatRight(text)
-		local width = imgui.GetWindowWidth()
-		local calc = imgui.CalcTextSize(u8(text))
-		imgui.SetCursorPosX(width - calc.x - 10)
-		imgui.Text(text)
-
-		print(width, calc.x)
-	end
-
-	function imgui.TextColoredRGB(text)
-		local style = imgui.GetStyle()
-		local colors = style.Colors
-		local ImVec4 = imgui.ImVec4
-	
-		local explode_argb = function(argb)
-			local a = bit.band(bit.rshift(argb, 24), 0xFF)
-			local r = bit.band(bit.rshift(argb, 16), 0xFF)
-			local g = bit.band(bit.rshift(argb, 8), 0xFF)
-			local b = bit.band(argb, 0xFF)
-			return a, r, g, b
-		end
-	
-		local getcolor = function(color)
-			if color:sub(1, 6):upper() == 'SSSSSS' then
-				local r, g, b = colors[1].x, colors[1].y, colors[1].z
-				local a = tonumber(color:sub(7, 8), 16) or colors[1].w * 255
-				return ImVec4(r, g, b, a / 255)
-			end
-			local color = type(color) == 'string' and tonumber(color, 16) or color
-			if type(color) ~= 'number' then return end
-			local r, g, b, a = explode_argb(color)
-			return imgui.ImColor(r, g, b, a):GetVec4()
-		end
-	
-		local render_text = function(text_)
-			for w in text_:gmatch('[^\r\n]+') do
-				local text, colors_, m = {}, {}, 1
-				w = w:gsub('{(......)}', '{%1FF}')
-				while w:find('{........}') do
-					local n, k = w:find('{........}')
-					local color = getcolor(w:sub(n + 1, k - 1))
-					if color then
-						text[#text], text[#text + 1] = w:sub(m, n - 1), w:sub(k + 1, #w)
-						colors_[#colors_ + 1] = color
-						m = n
-					end
-					w = w:sub(1, n - 1) .. w:sub(k + 1, #w)
-				end
-				if text[0] then
-					for i = 0, #text do
-						imgui.TextColored(colors_[i] or colors[1], u8(text[i]))
-						imgui.SameLine(nil, 0)
-					end
-					imgui.NewLine()
-				else imgui.Text(u8(w)) end
-			end
-		end
-	
-		render_text(text)
-	end
-	
 
 	function imgui.TextQuestion(text)
 		imgui.TextDisabled('(?)')
@@ -520,15 +377,16 @@ function imgui_init()
         main = imgui.ImBool(false),
         func = imgui.ImBool(false),
         stats = imgui.ImBool(false),
+        settings = imgui.ImBool(false),
         info = imgui.ImBool(false),
         teleport = imgui.ImBool(false),
-		spectatemenu = imgui.ImBool(false)
+        spectatemenu = imgui.ImBool(false)
     }
 
 	function imgui.OnDrawFrame()
-		if wInfo.main.v then drawMain() end
-		if wInfo.info.v then drawInfo() end
-		if wInfo.teleport.v then drawTeleport() end
+        if wInfo.main.v then drawMain() end
+        if wInfo.info.v then drawInfo() end
+        if wInfo.teleport.v then drawTeleport() end
 		if wInfo.func.v then drawFunctions() end
 		if wInfo.spectatemenu.v and sampIsPlayerConnected(recInfo.id) and sampGetPlayerScore(recInfo.id) ~= 0 then drawSpectateMenu() end
     end
@@ -558,7 +416,7 @@ end
 function drawInfo()
     local ScreenX, ScreenY = getScreenResolution() 
 
-    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 800, ScreenY / 2 + 300), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 600, ScreenY / 2 + 300), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
     imgui.Begin(u8"Информация о скрипте", wInfo.info, imgui.WindowFlags.NoResize)
 
     if imgui.Button(u8'Связь с разработчиком',imgui.ImVec2(310,25)) then
@@ -581,8 +439,8 @@ end
 function drawTeleport()
     local ScreenX, ScreenY = getScreenResolution() 
 
-    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 650, ScreenY - 400), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-    imgui.SetNextWindowSize(imgui.ImVec2(300, 100), imgui.Cond.FirstUseEver)
+    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 565, ScreenY / 2 + 50), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+    imgui.SetNextWindowSize(imgui.ImVec2(300, 120), imgui.Cond.FirstUseEver)
     imgui.Begin(u8'Телепорт-меню', wInfo.teleport, imgui.WindowFlags.NoResize)
 
     if imgui.BeginMenu(u8'Важные места') then
@@ -628,116 +486,116 @@ function drawFunctions()
 	
 	imgui.Text(u8"Основные функции:")
 	imgui.Separator()
+	imgui.Text(u8"\n")
 
-	imgui.TextQuestion(u8"Автоматически вводит пароль при входе на сервере"); imgui.SameLine()
-	imgui.Text(u8"Авто-логин"); imgui.SameLine()
-  	if imgui.DrawToggleButtonRight('##', ckAutoLogin) then
+  	if imgui.Checkbox(u8'Авто-логин', ckAutoLogin) then
    	 	mainIni.settings.autologin = ckAutoLogin.v
     	inicfg.save(mainIni, "admintools.ini")
 	end
+	  
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Автоматически вводит пароль при входе на сервере")
 
-	if ckAutoLogin.v then
-		imgui.TextQuestion(u8"Пароль сохраняется в папке config/Admin_Tools.ini, никогда не показывайте этот файл другому человеку."); imgui.SameLine()
-		imgui.Text(u8"Введите пароль от аккаунта:"); imgui.SameLine()
+  	if ckAutoLogin then
+		imgui.SameLine()
 
+		if wInfo.settings.showpass then
+		if imgui.InputText(u8'##', temp_buffers.password) then
+			mainIni.settings.password = temp_buffers.password.v
+			inicfg.save(mainIni, "admintools.ini")
+		end
+
+		imgui.SameLine()
+		if imgui.Button(u8"Скрыть пароль") then
+			wInfo.settings.showpass = not wInfo.settings.showpass
+		end
+		else
 		if imgui.InputText(u8'##', temp_buffers.password, imgui.InputTextFlags.Password) then
 			mainIni.settings.password = temp_buffers.password.v
 			inicfg.save(mainIni, "admintools.ini")
 		end
+
+		imgui.SameLine()
+		if imgui.Button(u8"Показать пароль") then
+			wInfo.settings.showpass = not wInfo.settings.showpass
+		end
+		end
 	end
 
-	imgui.TextQuestion(u8"Автоматически вводит /aduty при успешной авторизации в аккаунт"); imgui.SameLine()
-	imgui.Text(u8"Авто /aduty"); imgui.SameLine()
-	if imgui.DrawToggleButtonRight('##', ckAutoAduty) then
+	if imgui.Checkbox(u8'Авто /aduty', ckAutoAduty) then
 		mainIni.settings.autoAduty = ckAutoAduty.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
-	imgui.TextQuestion(u8"Убирает строку о начале слежки за игроком от другого администратора"); imgui.SameLine()
-	imgui.Text(u8"Отключение оповещения о начале слежки"); imgui.SameLine()
-	if imgui.DrawToggleButtonRight('##', ckOffReconAlert) then
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Автоматически вводит /aduty при успешной авторизации в аккаунт")
+
+	if imgui.Checkbox(u8'Отключение оповещения о начале слежки', ckOffReconAlert) then
 		mainIni.settings.offReconAlert = ckOffReconAlert.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
-	imgui.TextQuestion(u8"Убирает медвежью услугу в виде оповещения о том, что саппорт ответил игроку"); imgui.SameLine()
-	imgui.Text(u8"Отключение ответов от хелперов"); imgui.SameLine()
-	if imgui.DrawToggleButtonRight('##', ckOffHelpersAnswers) then
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Убирает строку о начале слежки за игроком от другого администратора")
+
+	if imgui.Checkbox(u8'Отключение ответов от хелперов', ckOffHelpersAnswers) then
 		mainIni.settings.offHelpersAnswers = ckOffHelpersAnswers.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
+
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Убирает медвежью услугу в виде оповещения о том, что саппорт ответил игроку")
 	
-	imgui.TextQuestion(u8"Позволяет видеть игроков сквозь стены"); imgui.SameLine()
-	imgui.Text(u8"Wall Hack"); imgui.SameLine()
-	if imgui.DrawToggleButtonRight("##", ckWallhack) then
+	if imgui.Checkbox("Wall Hack", ckWallhack) then
 		mainIni.set.wallhack = ckWallhack.v
 		inicfg.save(mainIni, "admintools.ini")
 
 		nameTagSet(ckWallhack.v)
 	end
 
-	imgui.TextQuestion(u8"Позволяет видеть трейсера пуль того игрока, за которым вы следите"); imgui.SameLine()
-	imgui.Text(u8"Bullet traicers"); imgui.SameLine()
-	if imgui.DrawToggleButtonRight("##", ckTraicers) then 
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Позволяет видеть игроков сквозь стены")
+
+	if imgui.Checkbox(u8"Трейсеры пуль в слежке", ckTraicers) then 
 		mainIni.set.traicers = ckTraicers.v 
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
-	imgui.TextQuestion(u8"Позволяет телепортироваться по маркеру. Нажмите на колёсико мыши."); imgui.SameLine()
-	imgui.Text(u8"ТП по курсору"); imgui.SameLine()
-	if imgui.DrawToggleButtonRight("##", ckClickWarp) then 
+	imgui.SameLine()
+	imgui.TextQuestion(u8"Позволяет видеть трейсера пуль того игрока, за которым вы следите")
+
+	if imgui.Checkbox(u8"ТП по курсору", ckClickWarp) then 
 		mainIni.set.clickwarp = ckClickWarp.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
-	imgui.Text(u8"\n")
-	imgui.Text(u8"AirBreak:")
+	imgui.Text(u8"\nAirBreak:")
 	imgui.Separator()
+	imgui.Text(u8"\n")
 
-	imgui.TextQuestion(u8"Включает возможность использовать AirBreak с помощью Right Shift."); imgui.SameLine()
-	imgui.Text(u8"AirBreak"); imgui.SameLine()
-	if imgui.DrawToggleButtonRight(u8"##", ckAirBreak) then 
-		mainIni.set.airbreak = ckAirBreak.v
-		inicfg.save(mainIni, "admintools.ini")
+	if imgui.Checkbox(u8"AirBreak", ckAirBreak) then 
+		scriptInfo.airbreak = ckAirBreak.v
+
+		if scriptInfo.airbreak then
+			local posX, posY, posZ = getCharCoordinates(playerPed)
+			airBrkCoords = {posX, posY, posZ, 0.0, 0.0, getCharHeading(playerPed)}
+		end
 	end
 
-	imgui.TextColoredRGB("\nАктивация: {008080}Right Shift")
-	imgui.TextColoredRGB("\nУправление: {008080}WASD | Q - Вверх | E - Вниз | + - – изменение скорости (не NumPad)\n")
+	if imgui.SliderFloat(u8"Скорость", ckAirSpeed, 0.5, 15.0) then
+		scriptInfo.airspeed = ckAirSpeed
+	end
 
 	imgui.Text(u8"\nУправление скриптом:")
 	imgui.Separator()
+	imgui.Text(u8"\n")
 
 	if imgui.Button(u8'Перезагрузить скрипт') then
 		thisScript():reload()
 	end
 
-	imgui.SameLine()
-	
 	if imgui.Button(u8'Проверить обновления') then
-		if DEV_VERSION then
-			sampAddChatMessage("[Admin Tools]:{FFFFFF} Обновления не найдены.", 0xffa500)
-		else
-			lua_thread.create(function() 
-				autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
-			end)
-		end
-	end
-
-	imgui.SameLine()
-
-	if imgui.Button(u8'Сбросить настройки') then
-		mainIni.settings.autoAduty = false
-		mainIni.settings.autologin = false
-		mainIni.settings.offReconAlert = true
-		mainIni.settings.offHelpersAnswers = false
-		mainIni.settings.password = ""
-
-		mainIni.settings.wallhack = false
-		mainIni.settings.traicers = false
-		mainIni.settings.clickwarp = true
-		mainIni.settings.airbreak = true
-
-		inicfg.save(mainIni, "admintools.ini")
+		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
 	end
 
 	imgui.End()
@@ -747,12 +605,11 @@ function drawSpectateMenu()
 	local ScreenX, ScreenY = getScreenResolution()
 
 	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 350, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-	imgui.SetNextWindowSize(imgui.ImVec2(320, 350), imgui.Cond.FirstUseEver)
     imgui.Begin(string.format(u8"Spectating: %s(%d)", sampGetPlayerNickname(recInfo.id), recInfo.id), wInfo.spectatemenu, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
 	local result, ped = sampGetCharHandleBySampPlayerId(recInfo.id)
 
-	if recInfo.loading or not result then
+	if recInfo.loading then
 		imgui.Text(u8"Loading...")
 
 		if result then
@@ -760,51 +617,47 @@ function drawSpectateMenu()
 		end
 	else
 		imgui.Text(u8"Stats:\n\n")
-		imgui.Separator()
-		imgui.Text(u8"\n")
 
 		imgui.Text(u8"Health:")
 		imgui.SameLine()
-		imgui.TextFloatRight(string.format(u8"%d", sampGetPlayerHealth(recInfo.id)))
+		imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t%d", sampGetPlayerHealth(recInfo.id)))
 
 		imgui.Text(u8"Armour:")
 		imgui.SameLine()
-		imgui.TextFloatRight(string.format(u8"%d", sampGetPlayerArmor(recInfo.id)))
+		imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t %d", sampGetPlayerArmor(recInfo.id)))
 
 		imgui.Text(u8"Weapon:")
 		imgui.SameLine()
-		imgui.TextFloatRight(string.format(u8"%d", getCurrentCharWeapon(ped)))
+		imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t%d", getCurrentCharWeapon(ped)))
 
 		imgui.Text(u8"Ping:")
 		imgui.SameLine()
-		imgui.TextFloatRight(string.format(u8"%d", sampGetPlayerPing(recInfo.id)))
+		imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t %d", sampGetPlayerPing(recInfo.id)))
 
 		imgui.Text(u8"In pause:")
 		imgui.SameLine()
-		imgui.TextFloatRight(string.format(u8"%s", sampIsPlayerPaused(recInfo.id)))
+		imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t%s", sampIsPlayerPaused(recInfo.id)))
 
 		if isCharInAnyCar(ped) then
 			local vehicleId = storeCarCharIsInNoSave(ped)
 
 			imgui.Text(u8"Speed:")
 			imgui.SameLine()
-			imgui.TextFloatRight(string.format(u8"%d", getCarSpeed(vehicleId)))
+			imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t %d", getCarSpeed(vehicleId) * 2.8))
 
 			imgui.Text(u8"Vehicle health:")
 			imgui.SameLine()
-			imgui.TextFloatRight(string.format(u8"%d", getCarHealth(vehicleId)))
+			imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t  %s", getCarHealth(vehicleId)))
 		else
 			imgui.Text(u8"Speed:")
 			imgui.SameLine()
-			imgui.TextFloatRight(string.format(u8"%d", getCharSpeed(ped)))
+			imgui.Text(string.format(u8"\t\t\t\t\t\t\t\t\t\t\t\t\t\t   %d", getCharSpeed(ped)))
 
 			imgui.Text(u8"Vehicle health:")
 			imgui.SameLine()
-			imgui.TextFloatRight(u8"-1")
+			imgui.Text(u8"\t\t\t\t\t\t\t\t\t\t\t  -1")
 		end
 
-		imgui.Text(u8"\n")
-		imgui.Separator()
 		imgui.Text(u8"\nActions:\n")
 
 		if imgui.Button(u8'<<< Previous') then
@@ -874,11 +727,11 @@ function drawSpectateMenu()
 
 		imgui.Text("\n")
 
-		if imgui.Button("REFRESH", imgui.ImVec2(275,25)) then
+		if imgui.Button("REFRESH", imgui.ImVec2(295,25)) then
 			sampSendClickTextdraw(scriptInfo.textdraws.refreshId)
 		end
 
-		if imgui.Button("STOP", imgui.ImVec2(275,25)) then
+		if imgui.Button("STOP", imgui.ImVec2(295,25)) then
 			sampSendChat("/re off")
 		end
 	end
@@ -1118,11 +971,6 @@ function setEntityCoordinates(entityPtr, x, y, z)
 end
 
 -- Search:: Custom functions
-function getLocalPlayerId()
-	local _, id = sampGetPlayerIdByCharHandle(playerPed)
-	return id
-end
-
 function nameTagSet(arg)
   local pStSet = sampGetServerSettingsPtr()
 
@@ -1158,7 +1006,7 @@ function sampev.onShowTextDraw(textdrawId, data)
 end
 
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-	if dialogId ~= 65535 and title:find("Ввод пароля") and ckAutoLogin.v and mainIni.settings.password ~= "" then
+	if dialogId ~= 65535 and title:find("Ввод пароля") and ckAutoLogin and mainIni.settings.password ~= "" then
 		sampSendDialogResponse(dialogId, 1, -1, mainIni.settings.password)
 		return false
 	end
@@ -1199,12 +1047,12 @@ end
 
 function sampev.onServerMessage(color, text)
 	if text:find("начал слежку за") then 
-		if text:find(sampGetPlayerNickname(getLocalPlayerId())) or mainIni.settings.offReconAlert then
+		if text:find(sampGetPlayerNickname(scriptInfo.myId)) or mainIni.settings.offReconAlert then
 			return false 
 		end
 	elseif text:find("[A] Хелпер") and text:find("->") and mainIni.settings.offHelpersAnswers then
 		return false
-	elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(getLocalPlayerId()) ~= 16510045 then
+	elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(scriptInfo.myId) ~= 16510045 then
 		lua_thread.create(function() 
 			wait(1000)
 			sampSendChat('/aduty')
@@ -1234,15 +1082,10 @@ function sampev.onServerMessage(color, text)
 			wInfo.spectatemenu.v = false
 			resetSpectateInfo()
 		end
-	elseif text:find("начал дежурство") and sampGetPlayerNickname(getLocalPlayerId()) then 
+	elseif text:find("начал дежурство") and sampGetPlayerNickname(scriptInfo.myId) then 
 		scriptInfo.aduty = true 
-	elseif text:find("ушёл с дежурства") and sampGetPlayerNickname(getLocalPlayerId()) then 
+	elseif text:find("ушёл с дежурства") and sampGetPlayerNickname(scriptInfo.myId) then 
 		scriptInfo.aduty = false
-	elseif text:find("Пароль введён неверно!") then
-		ckAutoLogin.v = false
-	
-		mainIni.settings.password = ""
-		inicfg.save(mainIni, "admintools.ini")
 	end
 end
 
@@ -1269,14 +1112,6 @@ function resetSpectateInfo()
 	recInfo.state = false
 	recInfo.id = -1
 	recInfo.lastCar = -1
-end
-
--- Search:: Terminate
-function onScriptTerminate(script, quitGame)
-	if script == thisScript() then
-		patches('SAMP_PATCH_SCOREBOARDTOGGLEON', true)
-		patches('SAMP_PATCH_SCOREBOARDTOGGLEONKEYLOCK', true)
-	end
 end
 
 -- Search:: Autoupdates
