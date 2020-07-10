@@ -1,4 +1,4 @@
-script_version('0.2.6')
+script_version('0.2.6-R2')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -82,8 +82,6 @@ function main()
 	while not sampIsLocalPlayerSpawned() do wait(1) end
 
 	sampRegisterChatCommand("rec", function(arg)
-		cleanStreamMemoryBuffer()
-		
 		time = tonumber(arg)
 		res = true
 	end)
@@ -104,11 +102,12 @@ function main()
 		imgui_init()
 		initializeRender()
 
-		while true do
-			--if memory.read(0x8E4CB4, 4, true) > 419430400 then cleanStreamMemoryBuffer() end
+		if mainIni.set.wallhack then
+			nameTagOn()
+		end
 
-			local chatstring = sampGetChatString(99)
-			if chatstring == "Server closed the connection." or chatstring == "You are banned from this server." then
+		while true do
+			if sampGetChatString(99) == "Server closed the connection." or sampGetChatString(99) == "You are banned from this server." then
 				time = nil
 				res = true
 			end
@@ -664,7 +663,7 @@ function drawFunctions()
 	imgui.TextQuestion(u8"Корректно определяет координату Z когда Вы ставите метку на карте.")
 	imgui.SameLine()
 
-	if imgui.DrawToggleButtonRight('#_3', 'Корректное определение Z координаты при телепорте', ckFixFindZ) then
+	if imgui.DrawToggleButtonRight('#_3', 'Fix SetPlayerPosFindZ', ckFixFindZ) then
 		mainIni.settings.fixFindZ = ckFixFindZ.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
@@ -749,6 +748,7 @@ function drawFunctions()
 		mainIni.set.clickwarp = true
 		mainIni.set.airbreak = true
 
+		nameTagOff()
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
@@ -1129,18 +1129,6 @@ function setEntityCoordinates(entityPtr, x, y, z)
 end
 
 -- Search:: Custom functions
-function cleanStreamMemoryBuffer() -- fix crash
-	local h0 = callFunction(0x53C500, 2, 2, true, true)
-	local h1 = callFunction(0x53C810, 1, 1, true)
-	local h2 = callFunction(0x40CF80, 0, 0)
-	local h3 = callFunction(0x4090A0, 0, 0)
-	local h4 = callFunction(0x5A18B0, 0, 0)
-	local h5 = callFunction(0x707770, 0, 0)
-	local pX, pY, pZ = getCharCoordinates(PLAYER_PED)
-	requestCollision(pX, pY)
-	loadScene(pX, pY, pZ)
-end
-
 function getTargetBlipCoordinatesFixed()
     local bool, x, y, z = getTargetBlipCoordinates(); if not bool then return false end
     requestCollision(x, y); loadScene(x, y, z)
@@ -1252,10 +1240,6 @@ function sampev.onServerMessage(color, text)
 			wait(1000)
 			sampSendChat('/aduty')
 		end)
-
-		if mainIni.set.wallhack then
-			nameTagOn()
-		end
 	elseif text:find("Во время слежки") then
 		wInfo.spectatemenu.v = false
 		resetSpectateInfo()
@@ -1341,7 +1325,6 @@ function autoupdate(json_url, url)
 						end)
 					end)
 				else
-					sampAddChatMessage('[Admin Tools]:{FFFFFF} Обновление скрипта не требуется, вы используете последнюю версию.', 0xffa500)
 					update = false
 				end
 			end
