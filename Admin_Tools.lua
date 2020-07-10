@@ -1,4 +1,4 @@
-script_version('0.2.6-beta')
+script_version('0.2.6')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -82,6 +82,8 @@ function main()
 	while not sampIsLocalPlayerSpawned() do wait(1) end
 
 	sampRegisterChatCommand("rec", function(arg)
+		cleanStreamMemoryBuffer()
+		
 		time = tonumber(arg)
 		res = true
 	end)
@@ -103,7 +105,7 @@ function main()
 		initializeRender()
 
 		while true do
-			if memory.read(0x8E4CB4, 4, true) > 419430400 then cleanStreamMemoryBuffer() end
+			--if memory.read(0x8E4CB4, 4, true) > 419430400 then cleanStreamMemoryBuffer() end
 
 			local chatstring = sampGetChatString(99)
 			if chatstring == "Server closed the connection." or chatstring == "You are banned from this server." then
@@ -742,9 +744,9 @@ function drawFunctions()
 		mainIni.settings.offHelpersAnswers = false
 		mainIni.settings.password = ""
 
-		mainIni.settings.wallhack = false
-		mainIni.settings.traicers = false
-		mainIni.settings.clickwarp = true
+		mainIni.set.wallhack = false
+		mainIni.set.traicers = false
+		mainIni.set.clickwarp = true
 		mainIni.set.airbreak = true
 
 		inicfg.save(mainIni, "admintools.ini")
@@ -869,8 +871,8 @@ function drawSpectateMenu()
 		imgui.SameLine()
 
 		if imgui.Button(u8'/sethp') then
-			if temp_buffers.sethp:find("%D+") or temp_buffers.sethp == "" then
-				sampAddChatMessage('[Admin Tools]:{FFFFFF} В поле для ввода присутствуют запрещённые символы или в нём ничего нет.', 0xffa500)
+			if temp_buffers.sethp == "" then
+				sampAddChatMessage('[Admin Tools]:{FFFFFF} В поле для ввода ничего нет.', 0xffa500)
 			else
 				sampSendChat(string.format("/sethp %d %d", recInfo.id, tonumber(temp_buffers.sethp.v)))
 			end
