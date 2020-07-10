@@ -1,4 +1,4 @@
-script_version('0.2.5')
+script_version('0.2.5-R2')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -105,6 +105,14 @@ function main()
 		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен, приятного использования.", 0xffa500)
 
 		while true do
+			if mem.read(0x8E4CB4, 4, true) > 419430400 then cleanStreamMemoryBuffer() end
+
+			local chatstring = sampGetChatString(99)
+			if chatstring == "Server closed the connection." or chatstring == "You are banned from this server." then
+				time = nil
+				res = true
+			end
+
 			if isKeyJustPressed(key.VK_F9) then -- Activate:: Main window
 				if not scriptInfo.aduty then sampSendChat("/aduty") 
 				else
@@ -1126,6 +1134,18 @@ function setEntityCoordinates(entityPtr, x, y, z)
 end
 
 -- Search:: Custom functions
+function cleanStreamMemoryBuffer() -- fix crash
+	local h0 = callFunction(0x53C500, 2, 2, true, true)
+	local h1 = callFunction(0x53C810, 1, 1, true)
+	local h2 = callFunction(0x40CF80, 0, 0)
+	local h3 = callFunction(0x4090A0, 0, 0)
+	local h4 = callFunction(0x5A18B0, 0, 0)
+	local h5 = callFunction(0x707770, 0, 0)
+	local pX, pY, pZ = getCharCoordinates(PLAYER_PED)
+	requestCollision(pX, pY)
+	loadScene(pX, pY, pZ)
+end
+
 function getTargetBlipCoordinatesFixed()
     local bool, x, y, z = getTargetBlipCoordinates(); if not bool then return false end
     requestCollision(x, y); loadScene(x, y, z)
