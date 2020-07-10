@@ -1,4 +1,4 @@
-script_version('0.2.4')
+script_version('0.2.5')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -8,7 +8,7 @@ local Matrix3X3 			= require "matrix3x3"
 local Vector3D 				= require "vector3d"
 local inicfg 				= require 'inicfg'
 
-DEV_VERSION = false
+DEV_VERSION = true
 encoding.default = 'cp1251'
 u8 = encoding.UTF8
 
@@ -59,6 +59,7 @@ local tick = {
 -- Search:: Main config
 local mainIni = inicfg.load({
 	settings = {
+		fixFindZ = true,
 		autoAduty = false,
     	autologin = false,
 		showpass = false,
@@ -79,6 +80,11 @@ inicfg.save(mainIni, "admintools.ini")
 function main()
 	while not isSampAvailable() do wait(200) end
 	while not sampIsLocalPlayerSpawned() do wait(1) end
+
+	sampRegisterChatCommand("rec", function(arg)
+		time = tonumber(arg)
+		res = true
+	end)
 
 	if not DEV_VERSION then
 		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
@@ -115,6 +121,18 @@ function main()
 						imgui.ShowCursor = true
 					end
 				end
+			end
+
+			if res and time ~= nil then
+				sampDisconnectWithReason(quit)
+				wait(time*1000)
+				sampSetGamestate(1)
+				res = false
+			elseif res and time == nil then
+				sampDisconnectWithReason(quit)
+				wait(1000)
+				sampSetGamestate(1)
+				res = false
 			end
 
 			if scriptInfo.aduty then
@@ -351,7 +369,8 @@ function imgui_init()
 	ckWallhack = imgui.ImBool(mainIni.set.wallhack)
 	ckTraicers = imgui.ImBool(mainIni.set.traicers)
   
-  	-- Search:: Variables settings
+	-- Search:: Variables settings
+	ckFixFindZ = imgui.ImBool(mainIni.settings.fixFindZ)
 	ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
 	ckOffHelpersAnswers = imgui.ImBool(mainIni.settings.offHelpersAnswers)
 	ckOffReconAlert = imgui.ImBool(mainIni.settings.offReconAlert)
@@ -634,10 +653,18 @@ function drawFunctions()
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
+	imgui.TextQuestion(u8"Корректно определяет координату Z когда Вы ставите метку на карте.")
+	imgui.SameLine()
+
+	if imgui.DrawToggleButtonRight('#_3', 'Корректное определение Z координаты при телепорте', ckFixFindZ) then
+		mainIni.settings.fixFindZ = ckFixFindZ.v
+		inicfg.save(mainIni, "admintools.ini")
+	end
+
 	imgui.TextQuestion(u8"Убирает строку о начале слежки за игроком от другого администратора")
 	imgui.SameLine()
 
-	if imgui.DrawToggleButtonRight('#_3', 'Отключение оповещения о начале слежки', ckOffReconAlert) then
+	if imgui.DrawToggleButtonRight('#_4', 'Отключение оповещения о начале слежки', ckOffReconAlert) then
 		mainIni.settings.offReconAlert = ckOffReconAlert.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
@@ -645,7 +672,7 @@ function drawFunctions()
 	imgui.TextQuestion(u8"Убирает медвежью услугу в виде оповещения о том, что хелпер ответил игроку")
 	imgui.SameLine()
 
-	if imgui.DrawToggleButtonRight('#_4', 'Отключение ответов от хелперов', ckOffHelpersAnswers) then
+	if imgui.DrawToggleButtonRight('#_5', 'Отключение ответов от хелперов', ckOffHelpersAnswers) then
 		mainIni.settings.offHelpersAnswers = ckOffHelpersAnswers.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
@@ -653,17 +680,17 @@ function drawFunctions()
 	imgui.TextQuestion(u8"Позволяет видеть игроков сквозь стены")
 	imgui.SameLine()
 
-	if imgui.DrawToggleButtonRight('#_5', 'Wall Hack', ckWallhack) then
+	if imgui.DrawToggleButtonRight('#_6', 'Wall Hack', ckWallhack) then
 		mainIni.settings.wallhack = ckWallhack.v
 		inicfg.save(mainIni, "admintools.ini")
 
-		nameTagSet(ckWallhack.v)
+		if ckWallhack.v then nameTagOn() else nameTagOff() end
 	end
 
 	imgui.TextQuestion(u8"Позволяет видеть трейсера пуль того игрока, за которым вы следите")
 	imgui.SameLine()
 
-	if imgui.DrawToggleButtonRight('#_6', 'Трейсеры пуль в слежке', ckTraicers) then 
+	if imgui.DrawToggleButtonRight('#_7', 'Трейсеры пуль в слежке', ckTraicers) then 
 		mainIni.set.traicers = ckTraicers.v 
 		inicfg.save(mainIni, "admintools.ini")
 	end
@@ -671,7 +698,7 @@ function drawFunctions()
 	imgui.TextQuestion(u8"Позволяет телепортироваться по созданному маркеру. Активация: колёсико мыши.")
 	imgui.SameLine()
 
-	if imgui.DrawToggleButtonRight('#_7', 'ТП по курсору', ckClickWarp) then 
+	if imgui.DrawToggleButtonRight('#_8', 'ТП по курсору', ckClickWarp) then 
 		mainIni.set.clickwarp = ckClickWarp.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
@@ -679,7 +706,7 @@ function drawFunctions()
 	imgui.Text(u8"\nНастройки AirBreak:")
 	imgui.Separator()
 
-	if imgui.DrawToggleButtonRight('#_8', 'AirBreak', ckAirBreak) then 
+	if imgui.DrawToggleButtonRight('#_9', 'AirBreak', ckAirBreak) then 
 		mainIni.set.airbreak = ckAirBreak.v
 	end
 
@@ -841,7 +868,11 @@ function drawSpectateMenu()
 		imgui.SameLine()
 
 		if imgui.Button(u8'/sethp') then
-			sampSendChat(string.format("/sethp %d %d", recInfo.id, tonumber(temp_buffers.sethp.v)))
+			if temp_buffers.sethp:find("%D+") or temp_buffers.sethp == "" then
+				sampAddChatMessage('[Admin Tools]:{FFFFFF} В поле для ввода присутствуют запрещённые символы или в нём ничего нет.', 0xffa500)
+			else
+				sampSendChat(string.format("/sethp %d %d", recInfo.id, tonumber(temp_buffers.sethp.v)))
+			end
 		end
 
 		imgui.SameLine()
@@ -1095,23 +1126,30 @@ function setEntityCoordinates(entityPtr, x, y, z)
 end
 
 -- Search:: Custom functions
+function getTargetBlipCoordinatesFixed()
+    local bool, x, y, z = getTargetBlipCoordinates(); if not bool then return false end
+    requestCollision(x, y); loadScene(x, y, z)
+    local bool, x, y, z = getTargetBlipCoordinates()
+    return bool, x, y, z
+end
+
 function getLocalPlayerId()
 	local _, id = sampGetPlayerIdByCharHandle(playerPed)
 	return id
 end
 
-function nameTagSet(arg)
-  local pStSet = sampGetServerSettingsPtr()
-
-  if arg then
-	  memory.setfloat(pStSet + 39, 1488.0)
-	  memory.setint8(pStSet + 47, 0)
+function nameTagOn()
+    local pStSet = sampGetServerSettingsPtr()
+    memory.setfloat(pStSet + 39, 1488.0)
+    memory.setint8(pStSet + 47, 0)
     memory.setint8(pStSet + 56, 1)
-  else
+end
+
+function nameTagOff()
+    local pStSet = sampGetServerSettingsPtr()
     memory.setfloat(pStSet + 39, 50.0)
-	  memory.setint8(pStSet + 47, 0)
-	  memory.setint8(pStSet + 56, 1)
-  end
+    memory.setint8(pStSet + 47, 1)
+    memory.setint8(pStSet + 56, 1)
 end
 
 function ClearChat()
@@ -1121,6 +1159,17 @@ function ClearChat()
 end
 
 -- Search:: SA:MP Events
+function sampev.onSendMapMarker(position)
+	if scriptInfo.aduty and ckFixFindZ.v then
+		ignoreMessage = true
+		local _, x, y, z = getTargetBlipCoordinatesFixed()
+		setCharCoordinates(PLAYER_PED, x, y, z)
+		sampSendChat('/vw 0')
+			
+		return false
+	end
+end
+
 function sampev.onShowTextDraw(textdrawId, data)
 	if data.text:find("Refresh") then 
 		scriptInfo.textdraws.refreshId = textdrawId
@@ -1188,7 +1237,7 @@ function sampev.onServerMessage(color, text)
 		end)
 
 		if mainIni.set.wallhack then
-			nameTagSet(true)
+			nameTagOn()
 		end
 	elseif text:find("Во время слежки") then
 		wInfo.spectatemenu.v = false
@@ -1215,6 +1264,9 @@ function sampev.onServerMessage(color, text)
 		scriptInfo.aduty = true 
 	elseif text:find("ушёл с дежурства") and sampGetPlayerNickname(getLocalPlayerId()) then 
 		scriptInfo.aduty = false
+	elseif text:find("Вы переместились в виртуальный мир #0") and ignoreMessage then
+		ignoreMessage = nil
+		return false
 	end
 end
 
