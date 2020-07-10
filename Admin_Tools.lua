@@ -1,4 +1,4 @@
-script_version('0.2.6-R2')
+script_version('0.2.7-R1')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -102,10 +102,6 @@ function main()
 		imgui_init()
 		initializeRender()
 
-		if mainIni.set.wallhack then
-			nameTagOn()
-		end
-
 		while true do
 			if sampGetChatString(99) == "Server closed the connection." or sampGetChatString(99) == "You are banned from this server." then
 				time = nil
@@ -143,6 +139,8 @@ function main()
 			end
 
 			if scriptInfo.aduty then
+				if not wInfo.spectatemenu.v then imgui.Process = wInfo.main.v else imgui.Process = true end -- Search:: Close the window 
+
 				if isKeyDown(key.VK_MBUTTON) and ckClickWarp.v then -- Activate:: Clickwarp
 					scriptInfo.clickwarp = not scriptInfo.clickwarp
 					cursorEnabled = scriptInfo.clickwarp
@@ -150,7 +148,7 @@ function main()
 					while isKeyDown(key.VK_MBUTTON) do wait(80) end
 				end
 
-				if isKeyJustPressed(key.VK_RSHIFT) and mainIni.set.airbreak then -- Activate:: Airbreak
+				if isKeyJustPressed(key.VK_RSHIFT) and ckAirBreak.v then -- Activate:: Airbreak
 					scriptInfo.airbreak = not scriptInfo.airbreak
 
 					if scriptInfo.airbreak then
@@ -159,11 +157,8 @@ function main()
 					end
 				end
 
-				if not wInfo.spectatemenu.v then imgui.Process = wInfo.main.v else imgui.Process = true end -- Close the window 
-
 				local oTime = os.time()
-
-				if scriptInfo.traicers and not isPauseMenuActive() then
+				if ckTraicers.traicers and not isPauseMenuActive() then
 					for i = 1, BulletSync.maxLines do
 						if BulletSync[i].enable == true and BulletSync[i].time >= oTime then
 							local sx, sy, sz = calcScreenCoors(BulletSync[i].o.x, BulletSync[i].o.y, BulletSync[i].o.z)
@@ -384,6 +379,7 @@ function imgui_init()
  	ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
   
 	apply_custom_style()
+	if ckWallhack.v then nameTagOn() end
 
 	function imgui.TextQuestion(text)
 		imgui.TextDisabled('(?)')
@@ -468,15 +464,16 @@ function imgui_init()
 		return rBool
 	end
 
-	function imgui.DrawToggleButtonRight(str_id, text, value)
+	function imgui.DrawToggleButtonRight(str_id, text, bool)
 		imgui.Text(u8(text))
 		imgui.SameLine()
 
 		local width = imgui.GetWindowWidth()
 		local calc = imgui.CalcTextSize(u8(str_id))
-		imgui.SetCursorPosX(width - calc.x - 50)
+		imgui.SetCursorPosX(width - calc.x - 25)
 
-		imgui.ToggleButton(u8(str_id), value)
+		local rBool = imgui.ToggleButton(u8(str_id), bool)
+		return rBool
 	end
 
 	function imgui.TextFloatRight(text)
@@ -563,21 +560,15 @@ end
 function drawInfo()
     local ScreenX, ScreenY = getScreenResolution() 
 
-    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 800, ScreenY / 2 + 300), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 900, ScreenY - 350), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
     imgui.Begin(u8"Информация о скрипте", wInfo.info, imgui.WindowFlags.NoResize)
 
-    if imgui.Button(u8'Связь с разработчиком',imgui.ImVec2(310,25)) then
-        os.execute('start https://vk.com/unknownus3r')
-    end
-
-    imgui.SetCursorPosX((imgui.GetWindowWidth() - 70) / 2)
     imgui.Text(u8'Автор: taichi')
-    imgui.SetCursorPosX((imgui.GetWindowWidth() - 100) / 2)
-    imgui.Text(u8'Текущая версия скрипта: ' .. thisScript().version)
+	imgui.Text(u8'Текущая версия скрипта: ' .. thisScript().version)
+	imgui.Text(u8'\n')
 
-    if imgui.Button(u8'Назад',imgui.ImVec2(310,25)) then
-        wInfo.info.v = false
-        wInfo.main.v = true
+	if imgui.Button(u8'Связь с разработчиком',imgui.ImVec2(310,25)) then
+        os.execute('start https://vk.com/unknownus3r')
     end
 
     imgui.End()
@@ -586,7 +577,7 @@ end
 function drawTeleport()
     local ScreenX, ScreenY = getScreenResolution() 
 
-    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 650, ScreenY - 400), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 760, ScreenY - 450), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
     imgui.SetNextWindowSize(imgui.ImVec2(300, 100), imgui.Cond.FirstUseEver)
     imgui.Begin(u8'Телепорт-меню', wInfo.teleport, imgui.WindowFlags.NoResize)
 
@@ -628,8 +619,9 @@ end
 function drawFunctions() 
   	local ScreenX, ScreenY = getScreenResolution() 
 
-  	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 1300, ScreenY - 550), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-  	imgui.Begin(u8"Функции скрипта", wInfo.func, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 1150, ScreenY - 460), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+	imgui.SetNextWindowSize(imgui.ImVec2(400, 455), imgui.Cond.FirstUseEver)
+  	imgui.Begin(u8"Функции скрипта", wInfo.func, imgui.WindowFlags.NoResize)
 	
 	imgui.Text(u8"Основные функции:")
 	imgui.Separator()
@@ -642,14 +634,13 @@ function drawFunctions()
     	inicfg.save(mainIni, "admintools.ini")
 	end
 
-	if ckAutoLogin.v then
-		imgui.TextQuestion(u8"Пароль сохраняется в папке moonloader/config/admintools.ini, никогда не отправляйте и не показывайте этот файл другим людям.")
-		imgui.SameLine()
+	imgui.TextQuestion(u8"Пароль сохраняется в папке moonloader/config/admintools.ini, никогда не отправляйте и не показывайте этот файл другим людям.")
+	imgui.SameLine()
 
-		if imgui.InputText(u8'##', temp_buffers.password, imgui.InputTextFlags.Password) then
-			mainIni.settings.password = temp_buffers.password.v
-			inicfg.save(mainIni, "admintools.ini")
-		end
+	imgui.Text(u8"Пароль от аккаунта:"); imgui.SameLine()
+	if imgui.InputText(u8'##', temp_buffers.password, imgui.InputTextFlags.Password) then
+		mainIni.settings.password = temp_buffers.password.v
+		inicfg.save(mainIni, "admintools.ini")
 	end
 
 	imgui.TextQuestion(u8"Автоматически вводит /aduty при успешной авторизации в аккаунт")
@@ -747,6 +738,18 @@ function drawFunctions()
 		mainIni.set.traicers = false
 		mainIni.set.clickwarp = true
 		mainIni.set.airbreak = true
+
+		ckAirSpeed = imgui.ImFloat(scriptInfo.airspeed)
+		ckAirBreak = imgui.ImBool(mainIni.set.airbreak)
+		ckClickWarp = imgui.ImBool(mainIni.set.clickwarp)
+		ckWallhack = imgui.ImBool(mainIni.set.wallhack)
+		ckTraicers = imgui.ImBool(mainIni.set.traicers)
+
+		ckFixFindZ = imgui.ImBool(mainIni.settings.fixFindZ)
+		ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
+		ckOffHelpersAnswers = imgui.ImBool(mainIni.settings.offHelpersAnswers)
+		ckOffReconAlert = imgui.ImBool(mainIni.settings.offReconAlert)
+		ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
 
 		nameTagOff()
 		inicfg.save(mainIni, "admintools.ini")
@@ -1194,7 +1197,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 end
 
 function sampev.onBulletSync(playerid, data)
-	if recInfo.state and tonumber(playerid) == recInfo.id and recInfo.traicers then
+	if recInfo.state and tonumber(playerid) == recInfo.id and ckTraicers.v then
 		if data.target.x == -1 or data.target.y == -1 or data.target.z == -1 then
 			return true
 		end
