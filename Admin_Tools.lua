@@ -1,4 +1,4 @@
-script_version('0.2.3-R3')
+script_version('0.2.3-hotfix')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -83,13 +83,9 @@ function main()
 		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
 	end
 
-	local _, playerId = sampGetPlayerIdByCharHandle(PLAYER_PED)
-
-	if sampGetPlayerColor(playerId) == 16510045 then 
+	if sampGetPlayerColor(getLocalPlayerId()) == 16510045 then 
 		scriptInfo.aduty = true 
 	end
-
-	scriptInfo.myId = playerId
 
 	--if sampGetCurrentServerAddress() ~= "37.230.162.117" then
 	if sampGetCurrentServerAddress() ~= "95.181.158.18" then
@@ -609,7 +605,7 @@ function drawSpectateMenu()
 
 	local result, ped = sampGetCharHandleBySampPlayerId(recInfo.id)
 
-	if recInfo.loading then
+	if recInfo.loading or not result then
 		imgui.Text(u8"Loading...")
 
 		if result then
@@ -971,6 +967,11 @@ function setEntityCoordinates(entityPtr, x, y, z)
 end
 
 -- Search:: Custom functions
+function getLocalPlayerId()
+	local _, id = sampGetPlayerIdByCharHandle(playerPed)
+	return id
+end
+
 function nameTagSet(arg)
   local pStSet = sampGetServerSettingsPtr()
 
@@ -1047,12 +1048,12 @@ end
 
 function sampev.onServerMessage(color, text)
 	if text:find("начал слежку за") then 
-		if text:find(sampGetPlayerNickname(scriptInfo.myId)) or mainIni.settings.offReconAlert then
+		if text:find(sampGetPlayerNickname(getLocalPlayerId())) or mainIni.settings.offReconAlert then
 			return false 
 		end
 	elseif text:find("[A] Хелпер") and text:find("->") and mainIni.settings.offHelpersAnswers then
 		return false
-	elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(scriptInfo.myId) ~= 16510045 then
+	elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(getLocalPlayerId()) ~= 16510045 then
 		lua_thread.create(function() 
 			wait(1000)
 			sampSendChat('/aduty')
@@ -1082,9 +1083,9 @@ function sampev.onServerMessage(color, text)
 			wInfo.spectatemenu.v = false
 			resetSpectateInfo()
 		end
-	elseif text:find("начал дежурство") and sampGetPlayerNickname(scriptInfo.myId) then 
+	elseif text:find("начал дежурство") and sampGetPlayerNickname(getLocalPlayerId()) then 
 		scriptInfo.aduty = true 
-	elseif text:find("ушёл с дежурства") and sampGetPlayerNickname(scriptInfo.myId) then 
+	elseif text:find("ушёл с дежурства") and sampGetPlayerNickname(getLocalPlayerId()) then 
 		scriptInfo.aduty = false
 	end
 end
