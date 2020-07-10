@@ -1,4 +1,4 @@
-script_version('0.2.5-R3')
+script_version('0.2.6-beta')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -101,8 +101,6 @@ function main()
 		r_smart_lib_imgui()
 		imgui_init()
 		initializeRender()
-
-		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен. Текущая версия: " .. thisScript().version, 0xffa500)
 
 		while true do
 			if memory.read(0x8E4CB4, 4, true) > 419430400 then cleanStreamMemoryBuffer() end
@@ -716,6 +714,7 @@ function drawFunctions()
 
 	if imgui.DrawToggleButtonRight('#_9', 'AirBreak', ckAirBreak) then 
 		mainIni.set.airbreak = ckAirBreak.v
+		inicfg.save(mainIni, "admintools.ini")
 	end
 
 	imgui.Text(u8'Скорость:')
@@ -1245,6 +1244,8 @@ function sampev.onServerMessage(color, text)
 	elseif text:find("[A] Хелпер") and text:find("->") and mainIni.settings.offHelpersAnswers then
 		return false
 	elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(getLocalPlayerId()) ~= 16510045 then
+		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен. Текущая версия: " .. thisScript().version, 0xffa500)
+
 		lua_thread.create(function() 
 			wait(1000)
 			sampSendChat('/aduty')
@@ -1274,9 +1275,9 @@ function sampev.onServerMessage(color, text)
 			wInfo.spectatemenu.v = false
 			resetSpectateInfo()
 		end
-	elseif text:find("начал дежурство") and sampGetPlayerNickname(getLocalPlayerId()) then 
+	elseif text:find("начал дежурство") and text:find(sampGetPlayerNickname(getLocalPlayerId())) then 
 		scriptInfo.aduty = true 
-	elseif text:find("ушёл с дежурства") and sampGetPlayerNickname(getLocalPlayerId()) then 
+	elseif text:find("ушёл с дежурства") and text:find(sampGetPlayerNickname(getLocalPlayerId())) then 
 		scriptInfo.aduty = false
 	elseif text:find("Вы переместились в виртуальный мир #0") and ignoreMessage then
 		ignoreMessage = nil
