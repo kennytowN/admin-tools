@@ -1,4 +1,4 @@
-script_version('0.2.9')
+script_version('0.2.9-R2')
 script_properties("work-in-pause")
 
 local sampev 				= require 'lib.samp.events'
@@ -117,6 +117,14 @@ function main()
 		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен. Текущая версия: " .. thisScript().version, 0xffa500)
 
 		while true do
+			if not wInfo.spectatemenu.v then -- Search:: Close the window 
+				imgui.Process = wInfo.main.v 
+				imgui.ShowCursor = wInfo.main.v
+			else 
+				imgui.Process = true 
+				imgui.ShowCursor = wInfo.main.v
+			end
+
 			if sampGetChatString(99) == "Server closed the connection." or sampGetChatString(99) == "You are banned from this server." then
 				time = nil
 				res = true
@@ -153,8 +161,6 @@ function main()
 			end
 
 			if scriptInfo.aduty then
-				if not wInfo.spectatemenu.v then imgui.Process = wInfo.main.v else imgui.Process = true end -- Search:: Close the window 
-
 				if isKeyDown(key.VK_MBUTTON) and ckClickWarp.v then -- Activate:: Clickwarp
 					scriptInfo.clickwarp = not scriptInfo.clickwarp
 					cursorEnabled = scriptInfo.clickwarp
