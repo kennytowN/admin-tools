@@ -1,4 +1,4 @@
-script_version('0.2.8')
+script_version('0.2.8-R2')
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -200,8 +200,8 @@ function main()
 						airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading + 90))
 						airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading + 90))
 					end
-					if isKeyDown(key.VK_UP) then airBrkCoords[3] = airBrkCoords[3] + scriptInfo.airspeed / 2.0 end
-					if isKeyDown(key.VK_DOWN) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - scriptInfo.airspeed / 2.0 end
+					if isKeyDown(key.VK_Q) then airBrkCoords[3] = airBrkCoords[3] + scriptInfo.airspeed / 2.0 end
+					if isKeyDown(key.VK_E) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - scriptInfo.airspeed / 2.0 end
 					if not isSampfuncsConsoleActive() and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
 						if isKeyDown(key.VK_OEM_PLUS) and time - tick.Keys.Plus > tick.Time.PlusMinus then
 							if scriptInfo.airspeed < 14.9 then scriptInfo.airspeed = scriptInfo.airspeed + 0.5 end
