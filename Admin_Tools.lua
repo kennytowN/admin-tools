@@ -1,4 +1,4 @@
-script_version('0.2.9-R2')
+script_version('0.2.9-R3')
 script_properties("work-in-pause")
 
 local sampev 				= require 'lib.samp.events'
@@ -9,7 +9,6 @@ local Matrix3X3 			= require "matrix3x3"
 local Vector3D 				= require "vector3d"
 local inicfg 				= require 'inicfg'
 
-DEV_VERSION = true
 encoding.default = 'cp1251'
 u8 = encoding.UTF8
 
@@ -97,9 +96,7 @@ function main()
 		res = true
 	end)
 
-	if not DEV_VERSION then
-		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
-	end
+	autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
 
 	if sampGetPlayerColor(getLocalPlayerId()) == 16510045 then 
 		scriptInfo.aduty = true
@@ -900,8 +897,13 @@ end
 function drawSpectateMenu()
 	local ScreenX, ScreenY = getScreenResolution()
 
-	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 350, ScreenY - 350), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-    imgui.Begin(string.format(u8"Spectating: %s(%d)", sampGetPlayerNickname(recInfo.id), recInfo.id), wInfo.spectatemenu, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 350, ScreenY - 400), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+
+	if not sampIsPlayerPaused(recInfo.id) then
+		imgui.Begin(string.format(u8"Spectating: %s(%d)", sampGetPlayerNickname(recInfo.id), recInfo.id), wInfo.spectatemenu, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+	else
+		imgui.Begin(string.format(u8"Spectating: %s(%d) [AFK]", sampGetPlayerNickname(recInfo.id), recInfo.id), wInfo.spectatemenu, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+	end
 
 	local result, ped = sampGetCharHandleBySampPlayerId(recInfo.id)
 
@@ -938,7 +940,7 @@ function drawSpectateMenu()
 			local vehicleId = storeCarCharIsInNoSave(ped)
 			local _, sampVehicleId = sampGetVehicleIdByCarHandle(vehicleId)
 
-			if recInfo.lastCar ~= sampVehicleId then
+			if recInfo.lastCar ~= sampVehicleId and not sampIsPlayerPaused(recInfo.id) then
 				recInfo.lastCar = sampVehicleId
 				sampSendClickTextdraw(scriptInfo.textdraws.refreshId)
 			end
@@ -950,8 +952,12 @@ function drawSpectateMenu()
 			imgui.Text(u8"Vehicle health:")
 			imgui.SameLine()
 			imgui.TextFloatRight(string.format(" %s", getCarHealth(vehicleId)))
+
+			imgui.Text(u8"Engine:")
+			imgui.SameLine()
+			imgui.TextFloatRight(string.format("%s", isCarEngineOn(vehicleId)))
 		else
-			if recInfo.lastCar ~= -1 then
+			if recInfo.lastCar ~= -1 and not sampIsPlayerPaused(recInfo.id) then
 				recInfo.lastCar = -1
 				sampSendClickTextdraw(scriptInfo.textdraws.refreshId)
 			end
@@ -1035,6 +1041,14 @@ function drawSpectateMenu()
 		imgui.PushItemWidth(87)
 		imgui.InputText(u8"##", temp_buffers.sethp)
 		imgui.PopItemWidth()
+
+		if isCharInAnyCar(ped) then
+			local _, vehicleId = sampGetVehicleIdByCarHandle(storeCarCharIsInNoSave(ped))
+
+			if imgui.Button(u8'/afixcar') then
+				sampSendChat(string.format("/afixcar %d", vehicleId))
+			end
+		end
 
 		imgui.Text("\n")
 
