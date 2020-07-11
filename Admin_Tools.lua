@@ -1,4 +1,4 @@
-script_version('0.3.0-R2')
+script_version('0.3.0-R3')
 script_properties("work-in-pause")
 
 local sampev 				= require 'lib.samp.events'
@@ -1575,14 +1575,13 @@ end
 -- Search:: Timer stats
 function addTimeToStats()
 	while true do
-		if not scriptInfo.aduty then addTimeToStatsId:terminate() end
-
-		print("работаем")
-
-		if not isGamePaused() then
-			mainIni.stats.adutyTime = mainIni.stats.adutyTime + 1
+		if not scriptInfo.aduty then addTimeToStatsId:terminate()
 		else
-			mainIni.stats.afkTime = mainIni.stats.afkTime + 1
+			if not isGamePaused() then
+				mainIni.stats.adutyTime = mainIni.stats.adutyTime + 1
+			else
+				mainIni.stats.afkTime = mainIni.stats.afkTime + 1
+			end
 		end
 
 		wait(1000)
