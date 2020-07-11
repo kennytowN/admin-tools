@@ -1,4 +1,5 @@
-script_version('0.2.8-R2')
+script_version('0.2.9')
+script_properties("work-in-pause")
 
 local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
@@ -8,7 +9,7 @@ local Matrix3X3 			= require "matrix3x3"
 local Vector3D 				= require "vector3d"
 local inicfg 				= require 'inicfg'
 
-DEV_VERSION = false
+DEV_VERSION = true
 encoding.default = 'cp1251'
 u8 = encoding.UTF8
 
@@ -74,6 +75,15 @@ local mainIni = inicfg.load({
 		wallhack = false,
 		traicers = false,
 		clickwarp = false
+	},
+
+	stats = {
+		adutyTime = 0,
+		afkTime = 0,
+		countAnswers = 0,
+		countJail = 0,
+		countMute = 0,
+		countKick = 0
 	}
 }, 'admintools')
 inicfg.save(mainIni, "admintools.ini")
@@ -92,7 +102,8 @@ function main()
 	end
 
 	if sampGetPlayerColor(getLocalPlayerId()) == 16510045 then 
-		scriptInfo.aduty = true 
+		scriptInfo.aduty = true
+		addTimeToStatsId = lua_thread.create(addTimeToStats) 
 	end
 
 	--if sampGetCurrentServerAddress() ~= "37.230.162.117" then
@@ -416,6 +427,7 @@ function imgui_init()
         if wInfo.teleport.v then drawTeleport() end
 		if wInfo.func.v then drawFunctions() end
 		if wInfo.spectatemenu.v and sampIsPlayerConnected(recInfo.id) and sampGetPlayerScore(recInfo.id) ~= 0 then drawSpectateMenu() end
+		if wInfo.stats.v then drawStats() end
 	end
 	
 	function imgui.ToggleButton(str_id, bool)
@@ -470,6 +482,73 @@ function imgui_init()
 		draw_list:AddCircleFilled(imgui.ImVec2(p.x + radius + t * (width - radius * 2.0), p.y + radius), radius - 0.75, imgui.GetColorU32(bool.v and imgui.GetStyle().Colors[imgui.Col.ButtonActive] or imgui.ImColor(150, 150, 150, 255):GetVec4()))
 	
 		return rBool
+	end
+
+	function imgui.RoundDiagram(valTable, radius, segments)
+		local draw_list = imgui.GetWindowDrawList()
+		local default = imgui.GetStyle().AntiAliasedShapes
+		imgui.GetStyle().AntiAliasedShapes = false
+		local center = imgui.ImVec2(imgui.GetCursorScreenPos().x + radius, imgui.GetCursorScreenPos().y + radius)
+		local function round(num)
+			if num >= 0 then
+				if select(2, math.modf(num)) >= 0.5 then
+					return math.ceil(num)
+				else
+					return math.floor(num)
+				end
+			else
+				if select(2, math.modf(num)) >= 0.5 then
+					return math.floor(num)
+				else
+					return math.ceil(num)
+				end
+			end
+		end
+	
+		local sum = 0
+		local q = {}
+	 
+		for k, v in ipairs(valTable) do
+			sum = sum + v.v
+		end
+	
+		for k, v in ipairs(valTable) do
+			if k > 1 then
+				q[k] = q[k-1] + round(valTable[k].v/sum*segments)
+			else
+				q[k] = round(valTable[k].v/sum*segments)
+			end
+		end
+	
+		local current = 1
+		local count = 1
+		local theta = 0
+		local step = 2*math.pi/segments
+	
+		for i = 1, segments do -- theta < 2*math.pi
+			if q[current] < count then
+				current = current + 1
+			end
+			draw_list:AddTriangleFilled(center, imgui.ImVec2(center.x + radius*math.cos(theta), center.y + radius*math.sin(theta)), imgui.ImVec2(center.x + radius*math.cos(theta+step), center.y + radius*math.sin(theta+step)), valTable[current].color)
+			theta = theta + step
+			count = count + 1
+		end
+	
+		local fontsize = imgui.GetFontSize()
+		local indented = 2*(radius + imgui.GetStyle().ItemSpacing.x)
+		imgui.Indent(indented)
+	
+		imgui.SameLine(0)
+		imgui.NewLine() -- awful fix for first line padding
+		imgui.SetCursorScreenPos(imgui.ImVec2(imgui.GetCursorScreenPos().x, center.y - imgui.GetTextLineHeight() * #valTable / 2))
+		for k, v in ipairs(valTable) do
+			draw_list:AddRectFilled(imgui.ImVec2(imgui.GetCursorScreenPos().x, imgui.GetCursorScreenPos().y), imgui.ImVec2(imgui.GetCursorScreenPos().x + fontsize, imgui.GetCursorScreenPos().y + fontsize), v.color)
+			imgui.SetCursorPosX(imgui.GetCursorPosX() + fontsize*1.3)
+			imgui.Text(u8(v.name .. ' - ' .. string.format('%s', SecondsToClock(v.v)) .. ' (' .. string.format('%.1f', v.v/sum*100) .. '%)'))
+		end
+		imgui.Unindent(indented)
+		imgui.SetCursorScreenPos(imgui.ImVec2(imgui.GetCursorScreenPos().x, center.y + radius + imgui.GetTextLineHeight()))
+		imgui.GetStyle().AntiAliasedShapes = default
 	end
 
 	function imgui.DrawToggleButtonRight(str_id, text, bool)
@@ -554,8 +633,7 @@ function drawMain()
     if imgui.Button(u8'Функции',imgui.ImVec2(310,25)) then
         wInfo.func.v = not wInfo.func.v
     elseif imgui.Button(u8'Статистика',imgui.ImVec2(310,25)) then 
-	   --wInfo.stats.v = not wInfo.stats.v
-	   sampAddChatMessage("[Admin Tools]:{FFFFFF} Эта функция находится в разработке.", 0xffa500)
+	   wInfo.stats.v = not wInfo.stats.v
     elseif imgui.Button(u8'Телепорт-лист',imgui.ImVec2(310,25)) then 
         wInfo.teleport.v = not wInfo.teleport.v
     elseif imgui.Button(u8'О скрипте',imgui.ImVec2(310,25)) then 
@@ -589,8 +667,8 @@ function drawTeleport()
     imgui.SetNextWindowSize(imgui.ImVec2(300, 100), imgui.Cond.FirstUseEver)
     imgui.Begin(u8'Телепорт-меню', wInfo.teleport, imgui.WindowFlags.NoResize)
 
-    if imgui.BeginMenu(u8'Важные места') then
-        if imgui.MenuItem(u8'Мэрия') then teleportPlayer(1481.1948,-1742.2594,13.5469)
+	if imgui.BeginMenu(u8'Важные места') then
+		if imgui.MenuItem(u8'Мэрия') then teleportPlayer(1481.1948,-1742.2594,13.5469)
         elseif imgui.MenuItem(u8'Spawn') then teleportPlayer(1716.4712,-1900.9441,13.5662)
         elseif imgui.MenuItem(u8'Банк') then teleportPlayer(591.5851,-1243.9316,17.9945)
         elseif imgui.MenuItem(u8'Автосалон') then teleportPlayer(553.4409,-1284.4994,17.2482)
@@ -783,11 +861,40 @@ function drawFunctions()
 
 	imgui.End()
 end
+	
+function drawStats() 
+	local ScreenX, ScreenY = getScreenResolution() 
+
+  	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 220, ScreenY - 600), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+  	imgui.SetNextWindowSize(imgui.ImVec2(400, 160), imgui.Cond.FirstUseEver)
+	imgui.Begin(u8"Статистика администрирования", wInfo.stats, imgui.WindowFlags.NoResize)
+
+	local statsDiagram = {
+        {
+            v = mainIni.stats.adutyTime,
+            name = 'Время в /aduty без AFK',
+            color = 0xFFFF7755
+        },
+        {
+            v = mainIni.stats.afkTime,
+            name = 'Время в /aduty в AFK',
+            color = 0xFF77FF55
+        }
+	}
+	
+	imgui.RoundDiagram(statsDiagram, 30, 50)
+
+	imgui.Text(string.format(u8"Отправлено игроков в Де Морган: %d", mainIni.stats.countJail))
+	imgui.Text(string.format(u8"Количество отключённых игроков: %d", mainIni.stats.countKick))
+	imgui.Text(string.format(u8"Отправлено ответов игрокам: %d", mainIni.stats.countAnswers))
+
+	imgui.End()
+end
 
 function drawSpectateMenu()
 	local ScreenX, ScreenY = getScreenResolution()
 
-	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 350, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 350, ScreenY - 350), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
     imgui.Begin(string.format(u8"Spectating: %s(%d)", sampGetPlayerNickname(recInfo.id), recInfo.id), wInfo.spectatemenu, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
 	local result, ped = sampGetCharHandleBySampPlayerId(recInfo.id)
@@ -823,6 +930,12 @@ function drawSpectateMenu()
 
 		if isCharInAnyCar(ped) then
 			local vehicleId = storeCarCharIsInNoSave(ped)
+			local _, sampVehicleId = sampGetVehicleIdByCarHandle(vehicleId)
+
+			if recInfo.lastCar ~= sampVehicleId then
+				recInfo.lastCar = sampVehicleId
+				sampSendClickTextdraw(scriptInfo.textdraws.refreshId)
+			end
 
 			imgui.Text(u8"Speed:")
 			imgui.SameLine()
@@ -832,6 +945,11 @@ function drawSpectateMenu()
 			imgui.SameLine()
 			imgui.TextFloatRight(string.format(" %s", getCarHealth(vehicleId)))
 		else
+			if recInfo.lastCar ~= -1 then
+				recInfo.lastCar = -1
+				sampSendClickTextdraw(scriptInfo.textdraws.refreshId)
+			end
+
 			imgui.Text(u8"Speed:")
 			imgui.SameLine()
 			imgui.TextFloatRight(string.format("%d", getCharSpeed(ped)))
@@ -1220,6 +1338,19 @@ function setEntityCoordinates(entityPtr, x, y, z)
 end
 
 -- Search:: Custom functions
+function SecondsToClock(seconds)
+	local seconds = tonumber(seconds)
+  
+	if seconds <= 0 then
+	  return "00:00:00";
+	else
+	  hours = string.format("%02.f", math.floor(seconds/3600));
+	  mins = string.format("%02.f", math.floor(seconds/60 - (hours*60)));
+	  secs = string.format("%02.f", math.floor(seconds - hours*3600 - mins *60));
+	  return hours..":"..mins..":"..secs
+	end
+end
+
 function getTargetBlipCoordinatesFixed()
     local bool, x, y, z = getTargetBlipCoordinates(); if not bool then return false end
     requestCollision(x, y); loadScene(x, y, z)
@@ -1352,11 +1483,27 @@ function sampev.onServerMessage(color, text)
 		end
 	elseif text:find("начал дежурство") and text:find(sampGetPlayerNickname(getLocalPlayerId())) then 
 		scriptInfo.aduty = true 
+		if addTimeToStatsId == nil then addTimeToStatsId = lua_thread.create(addTimeToStats) end
 	elseif text:find("ушёл с дежурства") and text:find(sampGetPlayerNickname(getLocalPlayerId())) then 
 		scriptInfo.aduty = false
 	elseif text:find("Вы переместились в виртуальный мир #0") and ignoreMessage then
 		ignoreMessage = nil
 		return false
+	elseif text:find(sampGetPlayerNickname(getLocalPlayerId())) then
+		if text:find("->") then
+			mainIni.stats.countAnswers = mainIni.stats.countAnswers + 1
+			inicfg.save(mainIni, "admintools.ini")
+		end
+
+		if text:find("кикнул") then
+			mainIni.stats.countKick = mainIni.stats.countKick + 1
+			inicfg.save(mainIni, "admintools.ini")
+		end
+
+		if text:find("посадил") then
+			mainIni.stats.countJail = mainIni.stats.countJail + 1
+			inicfg.save(mainIni, "admintools.ini")
+		end
 	end
 end
 
@@ -1383,6 +1530,21 @@ function resetSpectateInfo()
 	recInfo.state = false
 	recInfo.id = -1
 	recInfo.lastCar = -1
+end
+
+-- Search:: Timer stats
+function addTimeToStats()
+	while true do
+		if not scriptInfo.aduty then addTimeToStatsId:terminate() end
+
+		if not isPauseMenuActive() then
+			mainIni.stats.adutyTime = mainIni.stats.adutyTime + 1
+		else
+			mainIni.stats.afkTime = mainIni.stats.afkTime + 1
+		end
+
+		wait(1000)
+	end
 end
 
 -- Search:: Clean stream buffer
