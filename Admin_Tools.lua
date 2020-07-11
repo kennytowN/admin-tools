@@ -1,4 +1,4 @@
-script_version('0.3.0')
+script_version('0.3.0-R2')
 script_properties("work-in-pause")
 
 local sampev 				= require 'lib.samp.events'
@@ -314,10 +314,6 @@ function main()
 
 			wait(0)
 			removePointMarker()
-
-			if memory.read(0x8E4CB4, 4, true) > 419430400 then
-				cleanStreamMemoryBuffer()
-			end
 		end
 	end
 end
@@ -1591,19 +1587,6 @@ function addTimeToStats()
 
 		wait(1000)
 	end
-end
-
--- Search:: Clean stream buffer
-function cleanStreamMemoryBuffer() -- fix crash
-	local h0 = callFunction(0x53C500, 2, 2, true, true)
-	local h1 = callFunction(0x53C810, 1, 1, true)
-	local h2 = callFunction(0x40CF80, 0, 0)
-	local h3 = callFunction(0x4090A0, 0, 0)
-	local h4 = callFunction(0x5A18B0, 0, 0)
-	local h5 = callFunction(0x707770, 0, 0)
-	local pX, pY, pZ = getCharCoordinates(PLAYER_PED)
-	requestCollision(pX, pY)
-	loadScene(pX, pY, pZ)
 end
 
 -- Search:: Autoupdates
