@@ -1,4 +1,4 @@
-script_version('0.2.9-R3')
+script_version('0.3.0')
 script_properties("work-in-pause")
 
 local sampev 				= require 'lib.samp.events'
@@ -110,6 +110,9 @@ function main()
 		r_smart_lib_imgui()
 		imgui_init()
 		initializeRender()
+
+		mainIni.stats.adutyTime = 0
+		mainIni.stats.afkTime = 0
 
 		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен. Текущая версия: " .. thisScript().version, 0xffa500)
 
@@ -382,7 +385,7 @@ function imgui_init()
 	-- Search:: Text buffers
 	temp_buffers = {
 		password = imgui.ImBuffer(mainIni.settings.password, 256),
-		sethp = imgui.ImBuffer(4)
+		sethp = imgui.ImInt(100)
 	}
 
 	-- Search:: Variables functions
@@ -710,8 +713,8 @@ function drawFunctions()
 
 	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 1150, ScreenY - 460), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 	imgui.SetNextWindowSize(imgui.ImVec2(400, 475), imgui.Cond.FirstUseEver)
-  	imgui.Begin(u8"Функции скрипта", wInfo.func, imgui.WindowFlags.NoResize)
-	
+	imgui.Begin(u8"Функции скрипта", wInfo.func, imgui.WindowFlags.NoResize)
+
 	imgui.Text(u8"Основные функции:")
 	imgui.Separator()
 
@@ -977,7 +980,21 @@ function drawSpectateMenu()
 			local find = false
 
 			if recInfo.id == 0 then
-				sampAddChatMessage("[Admin Tools]:{FFFFFF} Предыдущий игрок не найден.", 0xffa500)
+				local id = sampGetMaxPlayerId(false)
+
+				if not sampIsPlayerConnected(id) or sampGetPlayerScore(id) == 0 or sampGetPlayerColor(id) == 16510045 then 
+					for i = sampGetMaxPlayerId(false), 0, -1 do
+						if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
+							find = true
+							sampSendChat(string.format("/re %d", i))
+							break
+						end
+
+						if not find then
+							sampAddChatMessage("[Admin Tools]:{FFFFFF} Предыдущий игрок не найден.", 0xffa500)
+						end
+					end
+				else sampSendChat(string.format('/re %d', sampGetMaxPlayerId(false))) end
 			else 
 				for i = recInfo.id, 0, -1 do
 					if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
@@ -997,7 +1014,14 @@ function drawSpectateMenu()
 
 		if imgui.Button(u8'Next >>>') then
 			if recInfo.id == sampGetMaxPlayerId(false) then
-				sampAddChatMessage("[Admin Tools]:{FFFFFF} Следующий игрок не найден.", 0xffa500)
+				if not sampIsPlayerConnected(0) or sampGetPlayerScore(0) == 0 or sampGetPlayerColor(0) == 16510045 then
+					for i = recInfo.id, sampGetMaxPlayerId(false) do
+						if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
+							sampSendChat(string.format("/re %d", i))
+							break
+						end
+					end
+				else sampSendChat('/re 0') end
 			else 
 				for i = recInfo.id, sampGetMaxPlayerId(false) do
 					if sampIsPlayerConnected(i) and sampGetPlayerScore(i) ~= 0 and sampGetPlayerColor(i) ~= 16510045 and i ~= recInfo.id then
@@ -1039,7 +1063,7 @@ function drawSpectateMenu()
 
 		imgui.SameLine()
 		imgui.PushItemWidth(87)
-		imgui.InputText(u8"##", temp_buffers.sethp)
+		imgui.InputInt(u8"##", temp_buffers.sethp)
 		imgui.PopItemWidth()
 
 		if isCharInAnyCar(ped) then
@@ -1557,7 +1581,9 @@ function addTimeToStats()
 	while true do
 		if not scriptInfo.aduty then addTimeToStatsId:terminate() end
 
-		if not isPauseMenuActive() then
+		print("работаем")
+
+		if not isGamePaused() then
 			mainIni.stats.adutyTime = mainIni.stats.adutyTime + 1
 		else
 			mainIni.stats.afkTime = mainIni.stats.afkTime + 1
