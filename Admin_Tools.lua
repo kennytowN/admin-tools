@@ -706,7 +706,7 @@ function drawMain()
     imgui.SetNextWindowPos(imgui.ImVec2(250, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
     imgui.Begin(u8'Mailen Tools', wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
-	--[[imgui.BeginChild('###', imgui.ImVec2(165, 300), false)
+	imgui.BeginChild('###', imgui.ImVec2(165, 300), false)
 		if imgui.Button(u8'Функции', imgui.ImVec2(150, 25)) then
 			wInfo.func.v = not wInfo.func.v
 		end
@@ -722,9 +722,13 @@ function drawMain()
 		if imgui.Button(u8'О скрипте', imgui.ImVec2(150, 25)) then 
 			wInfo.info.v = not wInfo.info.v
 		end
-	imgui.EndChild()]]
+	imgui.EndChild()
 
-    if imgui.Button(u8'Функции',imgui.ImVec2(310,25)) then
+	imgui.BeginChild('main')
+
+	imgui.EndChild()
+
+    --[[if imgui.Button(u8'Функции',imgui.ImVec2(310,25)) then
         wInfo.func.v = not wInfo.func.v
     elseif imgui.Button(u8'Статистика',imgui.ImVec2(310,25)) then 
 	   wInfo.stats.v = not wInfo.stats.v
@@ -732,7 +736,7 @@ function drawMain()
         wInfo.teleport.v = not wInfo.teleport.v
     elseif imgui.Button(u8'О скрипте',imgui.ImVec2(310,25)) then 
         wInfo.info.v = not wInfo.info.v
-	end
+	end]]
 
     imgui.End()
 end
