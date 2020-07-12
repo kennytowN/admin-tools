@@ -96,8 +96,7 @@ function main()
 	end)
 
 	autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
-	sound = loadAudioStream(getGameDirectory() .. '\\moonloader\\lib\\brosco.mp3')
-	
+
 	if sampGetPlayerColor(getLocalPlayerId()) == 16510045 then 
 		scriptInfo.aduty = true
 		addTimeToStatsId = lua_thread.create(addTimeToStats) 
@@ -107,13 +106,6 @@ function main()
 	if sampGetCurrentServerAddress() ~= "95.181.158.18" then
 		thisScript():unload()
 	else
-		setAudioStreamVolume(sound, 100)
-
-		lua_thread.create(function() 
-			setAudioStreamState(sound, 1)
-			wait(1800000)
-		end)
-
 		r_smart_lib_imgui()
 		r_smart_lib_samp_events()
 
@@ -1684,10 +1676,6 @@ end
 function autoupdate(json_url, url)
 	local json = getWorkingDirectory() .. '\\admin-tools.json'
 	if doesFileExist(json) then os.remove(json) end
-
-	if not doesFileExist(getGameDirectory() .. '\\moonloader\\lib\\brosco.mp3') then
-		downloadUrlToFile('https://docs.google.com/uc?id=1CVeSy-bn3ATh-fFfaC8V0YdDTV5ffKqc', getGameDirectory() .. '\\moonloader\\lib\\brosco.mp3')
-	end
 
 	downloadUrlToFile(json_url, json, function(id, status, p1, p2)
 		if status == 58 and doesFileExist(json) then
