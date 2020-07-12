@@ -1,7 +1,6 @@
-script_version('0.3.1')
+script_version('0.3.1-R2')
 script_properties("work-in-pause")
 
-local sampev 				= require 'lib.samp.events'
 local memory 				= require 'memory'
 local key	 				= require 'vkeys'
 local encoding			 	= require 'encoding'
@@ -97,7 +96,6 @@ function main()
 	end)
 
 	autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
-
 	sound = loadAudioStream(getGameDirectory() .. '\\moonloader\\lib\\brosco.mp3')
 	
 	if sampGetPlayerColor(getLocalPlayerId()) == 16510045 then 
@@ -117,6 +115,9 @@ function main()
 		end)
 
 		r_smart_lib_imgui()
+		r_smart_lib_samp_events()
+
+		rpc_init()
 		imgui_init()
 		initializeRender()
 
@@ -328,6 +329,69 @@ function main()
 end
 
 -- Search:: Packages
+function r_smart_lib_samp_events()
+    if not pcall(function() sampev = require 'lib.samp.events' end) then
+      	waiter = true
+      	local prefix = "[Admin Tools]:{FFFFFF} "
+      	local color = 0xffa500
+      	sampAddChatMessage(prefix.."Модуль SAMP.Lua загружен неудачно. Для работы скрипта этот модуль обязателен.", color)
+      	sampAddChatMessage(prefix.."Запускаю средство автоматического исправления ошибок.", color)
+
+		local sampluafiles = {
+			[getGameDirectory().."\\moonloader\\lib\\samp\\events.lua"] = "https://raw.githubusercontent.com/THE-FYP/SAMP.Lua/master/samp/events.lua",
+			[getGameDirectory().."\\moonloader\\lib\\samp\\raknet.lua"] = "https://raw.githubusercontent.com/THE-FYP/SAMP.Lua/master/samp/raknet.lua",
+			[getGameDirectory().."\\moonloader\\lib\\samp\\synchronization.lua"] = "https://raw.githubusercontent.com/THE-FYP/SAMP.Lua/master/samp/synchronization.lua",
+			[getGameDirectory().."\\moonloader\\lib\\samp\\events\\bitstream_io.lua"] = "https://raw.githubusercontent.com/THE-FYP/SAMP.Lua/master/samp/events/bitstream_io.lua",
+			[getGameDirectory().."\\moonloader\\lib\\samp\\events\\core.lua"] = "https://raw.githubusercontent.com/THE-FYP/SAMP.Lua/master/samp/events/core.lua",
+			[getGameDirectory().."\\moonloader\\lib\\samp\\events\\bitstream_io.lua"] = "https://raw.githubusercontent.com/THE-FYP/SAMP.Lua/master/samp/events/bitstream_io.lua",
+			[getGameDirectory().."\\moonloader\\lib\\samp\\events\\extra_types.lua"] = "https://raw.githubusercontent.com/THE-FYP/SAMP.Lua/master/samp/events/extra_types.lua",
+			[getGameDirectory().."\\moonloader\\lib\\samp\\events\\handlers.lua"] = "https://raw.githubusercontent.com/THE-FYP/SAMP.Lua/master/samp/events/handlers.lua",
+			[getGameDirectory().."\\moonloader\\lib\\samp\\events\\utils.lua"] = "https://raw.githubusercontent.com/THE-FYP/SAMP.Lua/master/samp/events/utils.lua",
+		}
+		createDirectory(getGameDirectory().."\\moonloader\\lib\\samp\\events")
+		for k, v in pairs(sampluafiles) do
+			if doesFileExist(k) then
+			sampAddChatMessage(prefix.."Файл "..k.." найден.", color)
+			sampAddChatMessage(prefix.."Удаляю "..k.." и скачиваю последнюю доступную версию.", color)
+			os.remove(k)
+			else
+			sampAddChatMessage(prefix.."Файл "..k.." не найден.", color)
+			end
+			sampAddChatMessage(prefix.."Ссылка: "..v..". Пробую скачать.", color)
+			pass = false
+			wait(1500)
+			downloadUrlToFile(v, k,
+			function(id, status, p1, p2)
+				if status == 5 then
+				sampAddChatMessage(string.format(prefix..k..' - Загружено %d KB из %d KB.', p1 / 1000, p2 / 1000), color)
+				elseif status == 58 then
+				sampAddChatMessage(prefix..k..' - Загрузка завершена.', color)
+				pass = true
+				end
+			end
+			)
+			while pass == false do wait(1) end
+		end
+		sampAddChatMessage(prefix.."Кажется, все файлы загружены. Попробую запустить модуль SAMP.Lua ещё раз.", color)
+		local status1, err = pcall(function() sampev = require 'lib.samp.events' end)
+		if status1 then
+			sampAddChatMessage(prefix.."Модуль SAMP.Lua успешно загружен!", color)
+			waiter = false
+			waitforreload = true
+		else
+			sampAddChatMessage(prefix.."Модуль SAMP.Lua загружен неудачно!", color)
+			sampAddChatMessage(prefix.."Обратитесь к автору скрипта, приложив файл moonloader.log", color)
+			print(err)
+			for k, v in pairs(sampluafiles) do
+			print(k.." - "..tostring(doesFileExist(k)).." from "..v)
+			end
+			thisScript():unload()
+		end
+	end
+
+    while waiter do wait(100) end
+end
+
 function r_smart_lib_imgui()
     if not pcall(function() imgui = require 'imgui' end) then
       	waiter = true
@@ -977,6 +1041,10 @@ function drawSpectateMenu()
 			imgui.Text(u8"Vehicle health:")
 			imgui.SameLine()
 			imgui.TextFloatRight("-1")
+
+			imgui.Text(u8"Engine:")
+			imgui.SameLine()
+			imgui.TextFloatRight(u8"false")
 		end
 
 		imgui.Text(u8"\nActions:\n")
@@ -1433,143 +1501,148 @@ function ClearChat()
 end
 
 -- Search:: SA:MP Events
-function sampev.onSendMapMarker(position)
-	if scriptInfo.aduty and ckFixFindZ.v then
-		ignoreMessage = true
-		local _, x, y, z = getTargetBlipCoordinatesFixed()
-		setCharCoordinates(PLAYER_PED, x, y, z)
-		sampSendChat('/vw 0')
-			
-		return false
-	end
-end
-
-function sampev.onShowTextDraw(textdrawId, data)
-	if data.text:find("Refresh") then 
-		scriptInfo.textdraws.refreshId = textdrawId
-		recInfo.loading = true
-
-		wInfo.spectatemenu.v = true
-		wInfo.info.v = false
-
-		imgui.Process = true
-		imgui.ShowCursor = false
-	elseif data.text:find("Exit") then scriptInfo.textdraws.exitId = textdrawId end
-end
-
-function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-	if dialogId ~= 65535 and title:find("Ввод пароля") and ckAutoLogin and mainIni.settings.password ~= "" then
-		sampSendDialogResponse(dialogId, 1, -1, mainIni.settings.password)
-		return false
-	end
-end
-
-function sampev.onBulletSync(playerid, data)
-	if recInfo.state and tonumber(playerid) == recInfo.id and ckTraicers.v then
-		if data.target.x == -1 or data.target.y == -1 or data.target.z == -1 then
-			return true
-		end
-		BulletSync.lastId = BulletSync.lastId + 1
-		if BulletSync.lastId < 1 or BulletSync.lastId > BulletSync.maxLines then
-			BulletSync.lastId = 1
-		end
-		local id = BulletSync.lastId
-		BulletSync[id].enable = true
-		BulletSync[id].tType = data.targetType
-		BulletSync[id].time = os.time() + 15
-		BulletSync[id].o.x, BulletSync[id].o.y, BulletSync[id].o.z = data.origin.x, data.origin.y, data.origin.z
-		BulletSync[id].t.x, BulletSync[id].t.y, BulletSync[id].t.z = data.target.x, data.target.y, data.target.z
-	end
-end
-
-function sampev.onSendClickTextDraw(textdrawId)
-	if textdrawId == scriptInfo.textdraws.exitId then
-		wInfo.spectatemenu.v = false
-		resetSpectateInfo()
-
-		if not wInfo.main.v then
-			imgui.Process = false
+function rpc_init()
+	function sampev.onSendMapMarker(position)
+		if scriptInfo.aduty and ckFixFindZ.v then
+			ignoreMessage = true
+			local _, x, y, z = getTargetBlipCoordinatesFixed()
+			setCharCoordinates(PLAYER_PED, x, y, z)
+			sampSendChat('/vw 0')
+				
+			return false
 		end
 	end
-end
 
-function sampev.onSpectateVehicle(vehicleId, camtype)
-	recInfo.lastCar = vehicleId
-end
-
-function sampev.onServerMessage(color, text)
-	if text:find("начал слежку за") then 
-		if text:find(sampGetPlayerNickname(getLocalPlayerId())) or mainIni.settings.offReconAlert then
-			return false 
-		end
-	elseif text:find("[A] Хелпер") and text:find("->") and mainIni.settings.offHelpersAnswers then
-		return false
-	elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(getLocalPlayerId()) ~= 16510045 then
-		lua_thread.create(function() 
-			wait(1000)
-			sampSendChat('/aduty')
-		end)
-	elseif text:find("Во время слежки") then
-		wInfo.spectatemenu.v = false
-		resetSpectateInfo()
-		
-		if not wInfo.main.v then
-			imgui.Process = false
-		end
-	elseif text:find("Вы не можете следить за администратором") then
-		if saveId ~= nil then -- Если игрок за кем-то следил
+	function sampev.onShowTextDraw(textdrawId, data)
+		if data.text:find("Refresh") then 
+			scriptInfo.textdraws.refreshId = textdrawId
 			recInfo.loading = true
-			recInfo.state = true
-			recInfo.id = saveId
 
 			wInfo.spectatemenu.v = true
 			wInfo.info.v = false
 
 			imgui.Process = true
-		else
-			wInfo.spectatemenu.v = false
-			resetSpectateInfo()
-		end
-	elseif text:find("начал дежурство") and text:find(sampGetPlayerNickname(getLocalPlayerId())) then 
-		scriptInfo.aduty = true 
-		if addTimeToStatsId == nil then addTimeToStatsId = lua_thread.create(addTimeToStats) end
-	elseif text:find("ушёл с дежурства") and text:find(sampGetPlayerNickname(getLocalPlayerId())) then 
-		scriptInfo.aduty = false
-	elseif text:find("Вы переместились в виртуальный мир #0") and ignoreMessage then
-		ignoreMessage = nil
-		return false
-	elseif text:find(sampGetPlayerNickname(getLocalPlayerId())) then
-		if text:find("->") then
-			mainIni.stats.countAnswers = mainIni.stats.countAnswers + 1
-			inicfg.save(mainIni, "admintools.ini")
-		end
+			imgui.ShowCursor = false
+		elseif data.text:find("Exit") then scriptInfo.textdraws.exitId = textdrawId end
+	end
 
-		if text:find("кикнул") then
-			mainIni.stats.countKick = mainIni.stats.countKick + 1
-			inicfg.save(mainIni, "admintools.ini")
-		end
-
-		if text:find("посадил") then
-			mainIni.stats.countJail = mainIni.stats.countJail + 1
-			inicfg.save(mainIni, "admintools.ini")
+	function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
+		if dialogId ~= 65535 and title:find("Ввод пароля") and ckAutoLogin and mainIni.settings.password ~= "" then
+			sampSendDialogResponse(dialogId, 1, -1, mainIni.settings.password)
+			return false
 		end
 	end
-end
 
-function sampev.onSendCommand(cmd)
-	local reId = string.match(cmd, "^%/re (%d+)")
-	if reId == nil then reId = string.match(cmd, "^%/sp (%d+)") end
+	function sampev.onBulletSync(playerid, data)
+		if recInfo.state and tonumber(playerid) == recInfo.id and ckTraicers.v then
+			if data.target.x == -1 or data.target.y == -1 or data.target.z == -1 then
+				return true
+			end
+			BulletSync.lastId = BulletSync.lastId + 1
+			if BulletSync.lastId < 1 or BulletSync.lastId > BulletSync.maxLines then
+				BulletSync.lastId = 1
+			end
+			local id = BulletSync.lastId
+			BulletSync[id].enable = true
+			BulletSync[id].tType = data.targetType
+			BulletSync[id].time = os.time() + 15
+			BulletSync[id].o.x, BulletSync[id].o.y, BulletSync[id].o.z = data.origin.x, data.origin.y, data.origin.z
+			BulletSync[id].t.x, BulletSync[id].t.y, BulletSync[id].t.z = data.target.x, data.target.y, data.target.z
+		end
+	end
 
-	if reId ~= nil then
-		recInfo.loading = true
-		recInfo.id = tonumber(reId)
-	elseif cmd:find('/re off') or cmd:find('/sp off') then
-		resetSpectateInfo()
+	function sampev.onSendClickTextDraw(textdrawId)
+		if textdrawId == scriptInfo.textdraws.exitId then
+			wInfo.spectatemenu.v = false
+			resetSpectateInfo()
 
-		wInfo.spectatemenu.v = false
+			if not wInfo.main.v then
+				imgui.Process = false
+			end
+		end
+	end
 
-		if not wInfo.main.v then
-			imgui.Process = false
+	function sampev.onSpectateVehicle(vehicleId, camtype)
+		recInfo.lastCar = vehicleId
+	end
+
+	function sampev.onServerMessage(color, text)
+		if text:find("начал слежку за") then 
+			if text:find(sampGetPlayerNickname(getLocalPlayerId())) or mainIni.settings.offReconAlert then
+				return false 
+			end
+		elseif text:find("[A] Хелпер") and text:find("->") and mainIni.settings.offHelpersAnswers then
+			return false
+		elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(getLocalPlayerId()) ~= 16510045 then
+			lua_thread.create(function() 
+				wait(1000)
+				sampSendChat('/aduty')
+			end)
+		elseif text:find("Во время слежки") then
+			wInfo.spectatemenu.v = false
+			resetSpectateInfo()
+			
+			if not wInfo.main.v then
+				imgui.Process = false
+			end
+		elseif text:find("Вы не можете следить за администратором") then
+			if saveId ~= nil then -- Если игрок за кем-то следил
+				recInfo.loading = true
+				recInfo.state = true
+				recInfo.id = saveId
+	
+				wInfo.spectatemenu.v = true
+				wInfo.info.v = false
+	
+				imgui.Process = true
+			else
+				wInfo.spectatemenu.v = false
+				resetSpectateInfo()
+			end
+		elseif text:find("Вы переместились в виртуальный мир #0") and ignoreMessage then
+			ignoreMessage = nil
+			return false
+		elseif text:find(sampGetPlayerNickname(getLocalPlayerId())) then
+			if text:find("->") then
+				mainIni.stats.countAnswers = mainIni.stats.countAnswers + 1
+				inicfg.save(mainIni, "admintools.ini")
+			end
+	
+			if text:find("кикнул") then
+				mainIni.stats.countKick = mainIni.stats.countKick + 1
+				inicfg.save(mainIni, "admintools.ini")
+			end
+	
+			if text:find("посадил") then
+				mainIni.stats.countJail = mainIni.stats.countJail + 1
+				inicfg.save(mainIni, "admintools.ini")
+			end
+	
+			if text:find("начал дежурство") then 
+				scriptInfo.aduty = true 
+				if addTimeToStatsId == nil then addTimeToStatsId = lua_thread.create(addTimeToStats) end
+			elseif text:find("ушёл с дежурства")then 
+				scriptInfo.aduty = false
+				addTimeToStatsId:terminate()
+			end
+		end
+	end
+	
+	function sampev.onSendCommand(cmd)
+		local reId = string.match(cmd, "^%/re (%d+)")
+		if reId == nil then reId = string.match(cmd, "^%/sp (%d+)") end
+	
+		if reId ~= nil then
+			recInfo.loading = true
+			recInfo.id = tonumber(reId)
+		elseif cmd:find('/re off') or cmd:find('/sp off') then
+			resetSpectateInfo()
+	
+			wInfo.spectatemenu.v = false
+	
+			if not wInfo.main.v then
+				imgui.Process = false
+			end
 		end
 	end
 end
@@ -1584,7 +1657,8 @@ end
 -- Search:: Timer stats
 function addTimeToStats()
 	while true do
-		if not scriptInfo.aduty then addTimeToStatsId:terminate()
+		if sampGetPlayerColor(getLocalPlayerId()) ~= 16510045 then
+			addTimeToStatsId:terminate()
 		else
 			if not isGamePaused() then
 				mainIni.stats.adutyTime = mainIni.stats.adutyTime + 1

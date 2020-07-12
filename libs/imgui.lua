@@ -10,7 +10,7 @@ local winmsg = require 'windows.message'
 local bitex = require 'bitex'
 local memory = require 'memory'
 
-imgui._VERSION = '1.1.3'
+imgui._VERSION = '1.1.5'
 imgui.BeforeDrawFrame = nil
 imgui.OnDrawFrame = nil
 imgui.Process = false
