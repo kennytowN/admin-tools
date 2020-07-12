@@ -1,4 +1,4 @@
-script_version('0.3.1-R2')
+script_version('0.3.1-R3')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -178,7 +178,7 @@ function main()
 					while isKeyDown(key.VK_MBUTTON) do wait(80) end
 				end
 
-				if isKeyJustPressed(key.VK_RSHIFT) and ckAirBreak.v then -- Activate:: Airbreak
+				if isKeyJustPressed(key.VK_RSHIFT) and ckAirBreak.v and not sampIsChatInputActive() then -- Activate:: Airbreak
 					scriptInfo.airbreak = not scriptInfo.airbreak
 
 					if scriptInfo.airbreak then
@@ -203,7 +203,7 @@ function main()
 				end
 
 				local time = os.clock() * 1000
-				if scriptInfo.airbreak then -- Аирбрейк
+				if scriptInfo.airbreak and not sampIsChatInputActive() then -- Аирбрейк
 					if isCharInAnyCar(playerPed) then heading = getCarHeading(storeCarCharIsInNoSave(playerPed))
 					else heading = getCharHeading(playerPed) end
 					local camCoordX, camCoordY, camCoordZ = getActiveCameraCoordinates()
@@ -1568,8 +1568,11 @@ function rpc_init()
 
 	function sampev.onServerMessage(color, text)
 		if text:find("начал слежку за") then 
-			if text:find(sampGetPlayerNickname(getLocalPlayerId())) or mainIni.settings.offReconAlert then
+			if text:find(sampGetPlayerNickname(getLocalPlayerId())) then
+				scriptInfo.airbreak = false
 				return false 
+			elseif mainIni.settings.offReconAlert then
+				return false
 			end
 		elseif text:find("[A] Хелпер") and text:find("->") and mainIni.settings.offHelpersAnswers then
 			return false
