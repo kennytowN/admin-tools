@@ -1,4 +1,4 @@
-script_version('0.3.2')
+script_version('0.3.2-R2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -27,7 +27,7 @@ local recInfo = {
 
 local scriptInfo = {
 	buttonId = 1,
-	aduty = false,
+	aduty = true,
   	clickwarp = false,
 	airBreak = false, 
   	airspeed = 0.5,
@@ -102,8 +102,8 @@ function main()
 		addTimeToStatsId = lua_thread.create(addTimeToStats) 
 	end
 
-	--if sampGetCurrentServerAddress() ~= "37.230.162.117" then
-	if sampGetCurrentServerAddress() ~= "95.181.158.18" then
+	if sampGetCurrentServerAddress() ~= "37.230.162.117" then
+	--if sampGetCurrentServerAddress() ~= "95.181.158.18" then
 		thisScript():unload()
 	else
 		r_smart_lib_imgui()
@@ -195,45 +195,54 @@ function main()
 				end
 
 				local time = os.clock() * 1000
-				if scriptInfo.airbreak and not sampIsChatInputActive() then -- Аирбрейк
-					if isCharInAnyCar(playerPed) then heading = getCarHeading(storeCarCharIsInNoSave(playerPed))
-					else heading = getCharHeading(playerPed) end
-					local camCoordX, camCoordY, camCoordZ = getActiveCameraCoordinates()
-					local targetCamX, targetCamY, targetCamZ = getActiveCameraPointAt()
-					local angle = getHeadingFromVector2d(targetCamX - camCoordX, targetCamY - camCoordY)
-					if isCharInAnyCar(playerPed) then difference = 0.79 else difference = 1.0 end
-					setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3] - difference)
-					if isKeyDown(key.VK_W) then
-						airBrkCoords[1] = airBrkCoords[1] + scriptInfo.airspeed * math.sin(-math.rad(angle))
-						airBrkCoords[2] = airBrkCoords[2] + scriptInfo.airspeed * math.cos(-math.rad(angle))
-						if not isCharInAnyCar(playerPed) then setCharHeading(playerPed, angle)
-						else setCarHeading(storeCarCharIsInNoSave(playerPed), angle) end
-					elseif isKeyDown(key.VK_S) then
-						airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading))
-						airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading))
-					end
-					if isKeyDown(key.VK_A) then
-						airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading - 90))
-						airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading - 90))
-					elseif isKeyDown(key.VK_D) then
-						airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading + 90))
-						airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading + 90))
-					end
-					if isKeyDown(key.VK_Q) then airBrkCoords[3] = airBrkCoords[3] + scriptInfo.airspeed / 2.0 end
-					if isKeyDown(key.VK_E) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - scriptInfo.airspeed / 2.0 end
-					if not isSampfuncsConsoleActive() and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
-						if isKeyDown(key.VK_OEM_PLUS) and time - tick.Keys.Plus > tick.Time.PlusMinus then
-							if scriptInfo.airspeed < 14.9 then scriptInfo.airspeed = scriptInfo.airspeed + 0.5 end
-							tick.Keys.Plus = time
-						elseif isKeyDown(key.VK_OEM_MINUS) and time - tick.Keys.Minus > tick.Time.PlusMinus then
-							if scriptInfo.airspeed > 0.5 then scriptInfo.airspeed = scriptInfo.airspeed - 0.5 end
-							tick.Keys.Minus = time
+				if scriptInfo.airbreak then -- Аирбрейк
+					if not sampIsChatInputActive() then
+						if isCharInAnyCar(playerPed) then heading = getCarHeading(storeCarCharIsInNoSave(playerPed))
+						else heading = getCharHeading(playerPed) end
+						local camCoordX, camCoordY, camCoordZ = getActiveCameraCoordinates()
+						local targetCamX, targetCamY, targetCamZ = getActiveCameraPointAt()
+						local angle = getHeadingFromVector2d(targetCamX - camCoordX, targetCamY - camCoordY)
+						if isCharInAnyCar(playerPed) then difference = 0.79 else difference = 1.0 end
+						setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3] - difference)
+						if isKeyDown(key.VK_W) then
+							airBrkCoords[1] = airBrkCoords[1] + scriptInfo.airspeed * math.sin(-math.rad(angle))
+							airBrkCoords[2] = airBrkCoords[2] + scriptInfo.airspeed * math.cos(-math.rad(angle))
+							if not isCharInAnyCar(playerPed) then setCharHeading(playerPed, angle)
+							else setCarHeading(storeCarCharIsInNoSave(playerPed), angle) end
+						elseif isKeyDown(key.VK_S) then
+							airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading))
+							airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading))
 						end
+						if isKeyDown(key.VK_A) then
+							airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading - 90))
+							airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading - 90))
+						elseif isKeyDown(key.VK_D) then
+							airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading + 90))
+							airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading + 90))
+						end
+						if isKeyDown(key.VK_Q) then airBrkCoords[3] = airBrkCoords[3] + scriptInfo.airspeed / 2.0 end
+						if isKeyDown(key.VK_E) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - scriptInfo.airspeed / 2.0 end
+						if not isSampfuncsConsoleActive() and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
+							if isKeyDown(key.VK_OEM_PLUS) and time - tick.Keys.Plus > tick.Time.PlusMinus then
+								if scriptInfo.airspeed < 14.9 then scriptInfo.airspeed = scriptInfo.airspeed + 0.5 end
+								tick.Keys.Plus = time
+							elseif isKeyDown(key.VK_OEM_MINUS) and time - tick.Keys.Minus > tick.Time.PlusMinus then
+								if scriptInfo.airspeed > 0.5 then scriptInfo.airspeed = scriptInfo.airspeed - 0.5 end
+								tick.Keys.Minus = time
+							end
+						end
+					else
+						local camCoordX, camCoordY, camCoordZ = getActiveCameraCoordinates()
+						local targetCamX, targetCamY, targetCamZ = getActiveCameraPointAt()
+						local angle = getHeadingFromVector2d(targetCamX - camCoordX, targetCamY - camCoordY)
+						if isCharInAnyCar(playerPed) then difference = 0.79 else difference = 1.0 end
+						setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3] - difference)
 					end
-				else
+				end
+				--[[else
 					setCharProofs(playerPed, true, true, true, true, true)
 					writeMemory(0x96916E, 1, 1, false)
-				end
+				end]]
 
 				if scriptInfo.clickwarp then
 					local mode = sampGetCursorMode()
@@ -696,6 +705,26 @@ function drawMain()
 
     imgui.SetNextWindowPos(imgui.ImVec2(250, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
     imgui.Begin(u8'Mailen Tools', wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+
+	--[[imgui.BeginChild('###', imgui.ImVec2(165, 300), false)
+
+	if imgui.Button(u8'Функции', imgui.ImVec2(150, 25)) then
+		wInfo.func.v = not wInfo.func.v
+	end
+
+	if imgui.Button(u8'Статистика', imgui.ImVec2(150, 25)) then 
+		wInfo.stats.v = not wInfo.stats.v
+	end
+
+	if imgui.Button(u8'Телепорт-лист', imgui.ImVec2(150, 25)) then 
+		wInfo.teleport.v = not wInfo.teleport.v
+	end
+
+	if imgui.Button(u8'О скрипте', imgui.ImVec2(150, 25)) then 
+		wInfo.info.v = not wInfo.info.v
+	end
+
+	imgui.EndChild()]]
 
     if imgui.Button(u8'Функции',imgui.ImVec2(310,25)) then
         wInfo.func.v = not wInfo.func.v
@@ -1163,7 +1192,7 @@ function apply_custom_style(id)
 	
 	if id == 0 then -- Голубой
 		style.WindowRounding = 2.0
-		style.WindowTitleAlign = imgui.ImVec2(0.5, 0.84)
+		--style.WindowTitleAlign = imgui.ImVec2(0.5, 0.84)
 		style.ChildWindowRounding = 2.0
 		style.FrameRounding = 2.0
 		style.ItemSpacing = imgui.ImVec2(5.0, 4.0)
@@ -1514,8 +1543,9 @@ function rpc_init()
 			wInfo.info.v = false
 
 			imgui.Process = true
-			imgui.ShowCursor = false
-		elseif data.text:find("Exit") then scriptInfo.textdraws.exitId = textdrawId end
+			imgui.ShowCursor = fals
+		elseif data.text:find("Exit") then scriptInfo.textdraws.exitId = textdrawId
+		elseif data.text:find("Jerome") then jeromeId = textdrawId end
 	end
 
 	function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
