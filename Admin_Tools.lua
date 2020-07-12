@@ -1,4 +1,4 @@
-script_version('0.3.2-R2')
+script_version('0.3.2-R3')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -102,8 +102,8 @@ function main()
 		addTimeToStatsId = lua_thread.create(addTimeToStats) 
 	end
 
-	if sampGetCurrentServerAddress() ~= "37.230.162.117" then
-	--if sampGetCurrentServerAddress() ~= "95.181.158.18" then
+	--if sampGetCurrentServerAddress() ~= "37.230.162.117" then
+	if sampGetCurrentServerAddress() ~= "95.181.158.18" then
 		thisScript():unload()
 	else
 		r_smart_lib_imgui()
@@ -706,27 +706,25 @@ function drawMain()
     imgui.SetNextWindowPos(imgui.ImVec2(250, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
     imgui.Begin(u8'Mailen Tools', wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
-	--[[imgui.BeginChild('###', imgui.ImVec2(165, 300), false)
+	imgui.BeginChild('###', imgui.ImVec2(165, 300), false)
+		if imgui.Button(u8'Функции', imgui.ImVec2(150, 25)) then
+			wInfo.func.v = not wInfo.func.v
+		end
 
-	if imgui.Button(u8'Функции', imgui.ImVec2(150, 25)) then
-		wInfo.func.v = not wInfo.func.v
-	end
+		if imgui.Button(u8'Статистика', imgui.ImVec2(150, 25)) then 
+			wInfo.stats.v = not wInfo.stats.v
+		end
 
-	if imgui.Button(u8'Статистика', imgui.ImVec2(150, 25)) then 
-		wInfo.stats.v = not wInfo.stats.v
-	end
+		if imgui.Button(u8'Телепорт-лист', imgui.ImVec2(150, 25)) then 
+			wInfo.teleport.v = not wInfo.teleport.v
+		end
 
-	if imgui.Button(u8'Телепорт-лист', imgui.ImVec2(150, 25)) then 
-		wInfo.teleport.v = not wInfo.teleport.v
-	end
+		if imgui.Button(u8'О скрипте', imgui.ImVec2(150, 25)) then 
+			wInfo.info.v = not wInfo.info.v
+		end
+	imgui.EndChild()
 
-	if imgui.Button(u8'О скрипте', imgui.ImVec2(150, 25)) then 
-		wInfo.info.v = not wInfo.info.v
-	end
-
-	imgui.EndChild()]]
-
-    if imgui.Button(u8'Функции',imgui.ImVec2(310,25)) then
+    --[[if imgui.Button(u8'Функции',imgui.ImVec2(310,25)) then
         wInfo.func.v = not wInfo.func.v
     elseif imgui.Button(u8'Статистика',imgui.ImVec2(310,25)) then 
 	   wInfo.stats.v = not wInfo.stats.v
@@ -734,7 +732,7 @@ function drawMain()
         wInfo.teleport.v = not wInfo.teleport.v
     elseif imgui.Button(u8'О скрипте',imgui.ImVec2(310,25)) then 
         wInfo.info.v = not wInfo.info.v
-	end
+	end]]
 
     imgui.End()
 end
