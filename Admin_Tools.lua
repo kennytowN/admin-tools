@@ -1,4 +1,4 @@
-script_version('0.3.1-R3')
+script_version('0.3.2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -1645,6 +1645,12 @@ function rpc_init()
 	
 			if not wInfo.main.v then
 				imgui.Process = false
+			end
+		elseif cmd:find('/goto') then
+			local Id = string.match(cmd, "^%/goto (%d+)")
+
+			if Id ~= nil then
+				scriptInfo.airbreak = false
 			end
 		end
 	end
