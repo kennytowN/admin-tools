@@ -1,4 +1,4 @@
-script_version('0.3.4-R2')
+script_version('0.3.4-R3')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -1658,6 +1658,7 @@ function rpc_init()
 			if color == -256 then
 				scriptInfo.aduty = false
 				addTimeToStatsId:terminate()
+				addTimeToStats = nil
 
 				setCharProofs(playerPed, true, true, true, true, true)
 				writeMemory(0x96916E, 1, 1, false)
