@@ -1,4 +1,4 @@
-script_version('0.3.3-R2')
+script_version('0.3.4')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -29,8 +29,7 @@ local scriptInfo = {
 	buttonId = 1,
 	aduty = false,
   	clickwarp = false,
-	airBreak = false, 
-  	airspeed = 0.5,
+	airBreak = false,
 
   	textdraws = {
 		refreshId = -1,
@@ -59,13 +58,15 @@ local tick = {
 local mainIni = inicfg.load({
 	settings = {
 		fixFindZ = true,
+		similarControl = false,
 		autoAduty = false,
     	autologin = false,
 		showpass = false,
 		offReconAlert = true,
 		offHelpersAnswers = false,
 		password = "",
-		themeId = 0
+		themeId = 0,
+		airspeed = 0.5
 	},
 
 	set = {
@@ -202,36 +203,48 @@ function main()
 						if isCharInAnyCar(playerPed) then difference = 0.79 else difference = 1.0 end
 						setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3] - difference)
 						if isKeyDown(key.VK_W) then
-							airBrkCoords[1] = airBrkCoords[1] + scriptInfo.airspeed * math.sin(-math.rad(angle))
-							airBrkCoords[2] = airBrkCoords[2] + scriptInfo.airspeed * math.cos(-math.rad(angle))
+							airBrkCoords[1] = airBrkCoords[1] + ckAirSpeed.v * math.sin(-math.rad(angle))
+							airBrkCoords[2] = airBrkCoords[2] + ckAirSpeed.v * math.cos(-math.rad(angle))
 							if not isCharInAnyCar(playerPed) then setCharHeading(playerPed, angle)
 							else setCarHeading(storeCarCharIsInNoSave(playerPed), angle) end
 						elseif isKeyDown(key.VK_S) then
-							airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading))
-							airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading))
+							airBrkCoords[1] = airBrkCoords[1] - ckAirSpeed.v * math.sin(-math.rad(heading))
+							airBrkCoords[2] = airBrkCoords[2] - ckAirSpeed.v * math.cos(-math.rad(heading))
 						end
 						if isKeyDown(key.VK_A) then
-							airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading - 90))
-							airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading - 90))
+							airBrkCoords[1] = airBrkCoords[1] - ckAirSpeed.v * math.sin(-math.rad(heading - 90))
+							airBrkCoords[2] = airBrkCoords[2] - ckAirSpeed.v * math.cos(-math.rad(heading - 90))
 						elseif isKeyDown(key.VK_D) then
-							airBrkCoords[1] = airBrkCoords[1] - scriptInfo.airspeed * math.sin(-math.rad(heading + 90))
-							airBrkCoords[2] = airBrkCoords[2] - scriptInfo.airspeed * math.cos(-math.rad(heading + 90))
+							airBrkCoords[1] = airBrkCoords[1] - ckAirSpeed.v * math.sin(-math.rad(heading + 90))
+							airBrkCoords[2] = airBrkCoords[2] - ckAirSpeed.v * math.cos(-math.rad(heading + 90))
 						end
-						if isKeyDown(key.VK_Q) then airBrkCoords[3] = airBrkCoords[3] + scriptInfo.airspeed / 2.0 end
-						if isKeyDown(key.VK_E) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - scriptInfo.airspeed / 2.0 end
+
+						if not ckSimilarControl.v then
+							if isKeyDown(key.VK_Q) then airBrkCoords[3] = airBrkCoords[3] + ckAirSpeed.v / 2.0 end
+							if isKeyDown(key.VK_E) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - ckAirSpeed.v / 2.0 end
+						else
+							if isKeyDown(key.VK_SPACE) then airBrkCoords[3] = airBrkCoords[3] + ckAirSpeed.v / 2.0 end
+							if isKeyDown(key.VK_SHIFT) and airBrkCoords[3] > -95.0 then airBrkCoords[3] = airBrkCoords[3] - ckAirSpeed.v / 2.0 end
+						end
+
 						if not isSampfuncsConsoleActive() and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
 							if isKeyDown(key.VK_OEM_PLUS) and time - tick.Keys.Plus > tick.Time.PlusMinus then
-								if scriptInfo.airspeed < 14.9 then scriptInfo.airspeed = scriptInfo.airspeed + 0.5 end
+								if ckAirSpeed.v < 14.9 then 
+									mainIni.settings.airspeed = mainIni.settings.airspeed + 0.5 
+									ckAirSpeed = imgui.ImFloat(mainIni.settings.airspeed)
+								end
+
 								tick.Keys.Plus = time
 							elseif isKeyDown(key.VK_OEM_MINUS) and time - tick.Keys.Minus > tick.Time.PlusMinus then
-								if scriptInfo.airspeed > 0.5 then scriptInfo.airspeed = scriptInfo.airspeed - 0.5 end
+								if mainIni.settings.airspeed > 0.5 then
+									mainIni.settings.airspeed = mainIni.settings.airspeed - 0.5 
+									ckAirSpeed = imgui.ImFloat(mainIni.settings.airspeed)
+								end
+
 								tick.Keys.Minus = time
 							end
 						end
 					else
-						local camCoordX, camCoordY, camCoordZ = getActiveCameraCoordinates()
-						local targetCamX, targetCamY, targetCamZ = getActiveCameraPointAt()
-						local angle = getHeadingFromVector2d(targetCamX - camCoordX, targetCamY - camCoordY)
 						if isCharInAnyCar(playerPed) then difference = 0.79 else difference = 1.0 end
 						setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3] - difference)
 					end
@@ -490,7 +503,8 @@ function imgui_init()
 	}
 
 	-- Search:: Variables functions
-	ckAirSpeed = imgui.ImFloat(scriptInfo.airspeed)
+	ckSimilarControl = imgui.ImBool(mainIni.settings.similarControl)
+	ckAirSpeed = imgui.ImFloat(mainIni.settings.airspeed)
 	ckAirBreak = imgui.ImBool(mainIni.set.airbreak)
 	ckClickWarp = imgui.ImBool(mainIni.set.clickwarp)
 	ckWallhack = imgui.ImBool(mainIni.set.wallhack)
@@ -655,6 +669,30 @@ function imgui_init()
 		imgui.GetStyle().AntiAliasedShapes = default
 	end
 
+	function imgui.Subtitle(text, high)
+		imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(1.0, 1.0, 1.0, 0.05))
+		imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(1.0, 1.0, 1.0, 0.05))
+		imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(1.0, 1.0, 1.0, 0.05))
+		imgui.PushStyleVar(imgui.StyleVar.ButtonTextAlign, imgui.ImVec2(0.1, 0.5))
+		imgui.PushStyleVar(imgui.StyleVar.FrameRounding, 1)
+			local subtitle = imgui.Button(text, imgui.ImVec2(-1, high))
+		imgui.PopStyleVar(2)
+		imgui.PopStyleColor(3)
+		return subtitle
+	end
+
+	function imgui.InvisibleTitleButton(text, width, height)
+		imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.0, 0.0, 0.0, 0.00))
+		imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.0, 0.0, 0.0, 0.00))
+		imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(1.0, 1.0, 1.0, 0.0))
+		imgui.PushStyleVar(imgui.StyleVar.ButtonTextAlign, imgui.ImVec2(0.1, 0.5))
+		imgui.PushStyleVar(imgui.StyleVar.FrameRounding, 1)
+			local invisible = imgui.Button(text, imgui.ImVec2(width, height))
+		imgui.PopStyleVar(2)
+		imgui.PopStyleColor(3)
+		return invisible
+	end
+
 	function imgui.DrawToggleButtonRight(str_id, text, bool)
 		imgui.Text(u8(text))
 		imgui.SameLine()
@@ -734,35 +772,43 @@ function drawMain()
     imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2 - 300, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
     imgui.Begin(u8'Mailen Tools', wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
-	imgui.BeginChild('###', imgui.ImVec2(165, 300), false)
-		if imgui.Button(fa.ICON_FA_TERMINAL ..  u8' Функции', imgui.ImVec2(165, 25)) then
-			wInfo.func.v = true
-			wInfo.teleport.v = false
-			wInfo.stats.v = false
-		end
-
-		if imgui.Button(fa.ICON_FA_USER .. u8' Статистика', imgui.ImVec2(165, 25)) then 
-			wInfo.stats.v = true
-
-			wInfo.func.v = false
-			wInfo.teleport.v = false
-		end
-
-		if imgui.Button(fa.ICON_FA_DOVE .. u8' Телепорт-лист', imgui.ImVec2(165, 25)) then 
-			wInfo.teleport.v = true
-
-			wInfo.func.v = false
-			wInfo.stats.v = false
-		end
-
-		if imgui.Button(fa.ICON_FA_LAPTOP_CODE .. u8' Связь с разработчиком',imgui.ImVec2(165,25)) then
-			os.execute('start https://vk.com/unknownus3r')
-		end
-	imgui.EndChild()
+	--imgui.BeginChild('###', imgui.ImVec2(685, 45), false)
+	if imgui.InvisibleTitleButton(fa.ICON_FA_TERMINAL ..  u8' Функции', 165, 25) then
+		wInfo.func.v = true
+		wInfo.teleport.v = false
+		wInfo.stats.v = false
+	end
 
 	imgui.SameLine()
 
-	imgui.BeginChild('##', imgui.ImVec2(500, 300), true)
+	if imgui.InvisibleTitleButton(fa.ICON_FA_USER .. u8' Статистика', 165, 25) then 
+		wInfo.stats.v = true
+
+		wInfo.func.v = false
+		wInfo.teleport.v = false
+	end
+
+	imgui.SameLine()
+
+	if imgui.InvisibleTitleButton(fa.ICON_FA_DOVE .. u8' Телепорт-лист', 165, 25) then 
+		wInfo.teleport.v = true
+
+		wInfo.func.v = false
+		wInfo.stats.v = false
+	end
+
+	imgui.SameLine()
+
+	if imgui.InvisibleTitleButton(fa.ICON_FA_LAPTOP_CODE .. u8' Связь с разработчиком', 170, 25) then
+		os.execute('start https://vk.com/unknownus3r')
+	end
+
+	imgui.Text('\n')
+	--imgui.EndChild()
+
+	--imgui.SameLine()
+
+	imgui.BeginChild('##', imgui.ImVec2(685, 300), false)
 		if wInfo.func.v then drawFunctions() end
 		if wInfo.teleport.v then drawTeleport() end
 		if wInfo.stats.v then drawStats() end 
@@ -806,9 +852,10 @@ function drawTeleport()
 end
 
 function drawFunctions() 
+	imgui.Subtitle('General', 30)
+	imgui.Text(u8"\n")
 
-	imgui.Text(u8"Основные функции:")
-	imgui.Separator()
+	--imgui.PushItemWidth(50)
 
 	imgui.TextQuestion(u8"Устанавливает тему для всех интерфейсов скрипта")
 	imgui.SameLine()
@@ -900,25 +947,48 @@ function drawFunctions()
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
-	imgui.Text(u8"\nНастройки AirBreak:")
-	imgui.Separator()
+	imgui.Text(u8'\n')
+	imgui.Subtitle('Airbreak', 30)
+	imgui.Text(u8"\n")
+
+	imgui.TextQuestion(u8"Позволяет пользоваться AirBreak с помощью нажатия на правый Shift.")
+	imgui.SameLine()
 
 	if imgui.DrawToggleButtonRight('#_9', 'AirBreak', ckAirBreak) then 
 		mainIni.set.airbreak = ckAirBreak.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
-	imgui.Text(u8'Скорость:')
-	if imgui.SliderFloat(u8"######", ckAirSpeed, 0.5, 15.0) then
-		scriptInfo.airspeed = ckAirSpeed.v
+	imgui.TextQuestion(u8"Поднятие вверх происходит на Space, а чтобы опуститься вниз нужно нажать левый Shift.")
+	imgui.SameLine()
+
+	if imgui.DrawToggleButtonRight('#10', 'Аналогичное управление', ckSimilarControl) then 
+		mainIni.settings.similarControl = ckSimilarControl.v
+		inicfg.save(mainIni, "admintools.ini")
 	end
 
-	--imgui.Text(u8"\n")
-	imgui.TextColoredRGB("Активация: {008080}Right Shift")
-	imgui.TextColoredRGB("Управление: {008080}WASD | Q - Вверх | E -Вниз")
+	imgui.Text(u8'Скорость:')
 
-	imgui.Text(u8"\nУправление скриптом:")
-	imgui.Separator()
+	imgui.PushItemWidth(680) 
+	if imgui.SliderFloat(u8"######", ckAirSpeed, 0.5, 15.0) then
+		mainIni.settings.airspeed = ckAirSpeed.v
+		inicfg.save(mainIni, "admintools.ini")
+	end
+	imgui.PopItemWidth()
+
+	--imgui.Text(u8"\n")
+
+	imgui.TextColoredRGB("Активация: {008080}Right Shift")
+
+	if not ckSimilarControl.v then
+		imgui.TextColoredRGB("Управление: {008080}WASD | Q - Вверх | E - Вниз")
+	else
+		imgui.TextColoredRGB("Управление: {008080}WASD | Space - Вверх | LSHIFT - Вниз")
+	end
+
+	imgui.Text(u8'\n')
+	imgui.Subtitle('Script management', 30)
+	imgui.Text(u8"\n")
 
 	if imgui.Button(u8'Перезагрузить скрипт') then
 		thisScript():reload()
@@ -945,7 +1015,8 @@ function drawFunctions()
 		mainIni.set.clickwarp = true
 		mainIni.set.airbreak = true
 
-		ckAirSpeed = imgui.ImFloat(scriptInfo.airspeed)
+		ckSimilarControl = imgui.ImBool(mainIni.settings.similarControl)
+		ckAirSpeed = imgui.ImFloat(mainIni.settings.airspeed)
 		ckAirBreak = imgui.ImBool(mainIni.set.airbreak)
 		ckClickWarp = imgui.ImBool(mainIni.set.clickwarp)
 		ckWallhack = imgui.ImBool(mainIni.set.wallhack)
@@ -1187,18 +1258,18 @@ function apply_custom_style(id)
     local colors = style.Colors
     local clr = imgui.Col
 	local ImVec4 = imgui.ImVec4
+
+	style.WindowRounding = 2.0
+	--style.WindowTitleAlign = imgui.ImVec2(0.5, 0.84)
+	style.ChildWindowRounding = 2.0
+	style.FrameRounding = 2.0
+	style.ItemSpacing = imgui.ImVec2(5.0, 4.0)
+	style.ScrollbarRounding = 0
+	style.GrabMinSize = 8.0
+	style.GrabRounding = 1.0
+	style.ScrollbarSize = 5.0
 	
 	if id == 0 then -- Голубой
-		style.WindowRounding = 2.0
-		--style.WindowTitleAlign = imgui.ImVec2(0.5, 0.84)
-		style.ChildWindowRounding = 2.0
-		style.FrameRounding = 2.0
-		style.ItemSpacing = imgui.ImVec2(5.0, 4.0)
-		style.ScrollbarSize = 13.0
-		style.ScrollbarRounding = 0
-		style.GrabMinSize = 8.0
-		style.GrabRounding = 1.0
-
 		colors[clr.FrameBg]                = ImVec4(0.16, 0.29, 0.48, 0.54)
 		colors[clr.FrameBgHovered]         = ImVec4(0.26, 0.59, 0.98, 0.40)
 		colors[clr.FrameBgActive]          = ImVec4(0.26, 0.59, 0.98, 0.67)
