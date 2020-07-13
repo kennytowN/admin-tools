@@ -1,4 +1,4 @@
-script_version('0.3.4')
+script_version('0.3.4-R2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -168,7 +168,7 @@ function main()
 					while isKeyDown(key.VK_MBUTTON) do wait(80) end
 				end
 
-				if isKeyJustPressed(key.VK_RSHIFT) and ckAirBreak.v and not sampIsChatInputActive() then -- Activate:: Airbreak
+				if isKeyJustPressed(key.VK_RSHIFT) and ckAirBreak.v and not sampIsChatInputActive() and not isSampfuncsConsoleActive() then -- Activate:: Airbreak
 					scriptInfo.airbreak = not scriptInfo.airbreak
 
 					if scriptInfo.airbreak then
@@ -194,7 +194,7 @@ function main()
 
 				local time = os.clock() * 1000
 				if scriptInfo.airbreak then -- Аирбрейк
-					if not sampIsChatInputActive() then
+					if not sampIsChatInputActive() and not isSampfuncsConsoleActive() then
 						if isCharInAnyCar(playerPed) then heading = getCarHeading(storeCarCharIsInNoSave(playerPed))
 						else heading = getCharHeading(playerPed) end
 						local camCoordX, camCoordY, camCoordZ = getActiveCameraCoordinates()
@@ -249,10 +249,6 @@ function main()
 						setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3] - difference)
 					end
 				end
-				--[[else
-					setCharProofs(playerPed, true, true, true, true, true)
-					writeMemory(0x96916E, 1, 1, false)
-				end]]
 
 				if scriptInfo.clickwarp then
 					local mode = sampGetCursorMode()
@@ -1657,6 +1653,24 @@ function rpc_init()
 		recInfo.lastCar = vehicleId
 	end
 
+	function sampev.onSetPlayerColor(playerId, color)
+		if playerId == getLocalPlayerId() then
+			if color == -256 then
+				scriptInfo.aduty = false
+				addTimeToStatsId:terminate()
+
+				setCharProofs(playerPed, true, true, true, true, true)
+				writeMemory(0x96916E, 1, 1, false)
+			elseif color == -68395776 then
+				scriptInfo.aduty = true 
+				if addTimeToStatsId == nil then addTimeToStatsId = lua_thread.create(addTimeToStats) end
+
+				setCharProofs(playerPed, false, false, false, false, false)
+				writeMemory(0x96916E, 1, 0, false)
+			end
+		end
+	end
+
 	function sampev.onServerMessage(color, text)
 		if text:find("начал слежку за") then 
 			if text:find(sampGetPlayerNickname(getLocalPlayerId())) then
@@ -1710,14 +1724,6 @@ function rpc_init()
 			if text:find("посадил") then
 				mainIni.stats.countJail = mainIni.stats.countJail + 1
 				inicfg.save(mainIni, "admintools.ini")
-			end
-	
-			if text:find("начал дежурство") then 
-				scriptInfo.aduty = true 
-				if addTimeToStatsId == nil then addTimeToStatsId = lua_thread.create(addTimeToStats) end
-			elseif text:find("ушёл с дежурства")then 
-				scriptInfo.aduty = false
-				addTimeToStatsId:terminate()
 			end
 		end
 	end
