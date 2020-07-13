@@ -1,4 +1,4 @@
-script_version('0.3.5')
+script_version('0.3.5-R2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -1655,7 +1655,7 @@ function rpc_init()
 
 	function sampev.onSetPlayerColor(playerId, color)
 		if playerId == getLocalPlayerId() then
-			if color == -256 then
+			if color == -256 and scriptInfo.aduty then 
 				scriptInfo.aduty = false
 				addTimeToStatsId:terminate()
 				addTimeToStatsId = nil
