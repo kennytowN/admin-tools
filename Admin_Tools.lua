@@ -1,4 +1,4 @@
-script_version('0.3.3')
+script_version('0.3.3-R2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -986,8 +986,6 @@ function drawStats()
 end
 
 function drawSpectateMenu()
-	print("draw")
-
 	local ScreenX, ScreenY = getScreenResolution()
 
 	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 350, ScreenY - 400), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
