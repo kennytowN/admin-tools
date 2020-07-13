@@ -1,4 +1,4 @@
-script_version('0.3.2-R2')
+script_version('0.3.3')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -27,7 +27,7 @@ local recInfo = {
 
 local scriptInfo = {
 	buttonId = 1,
-	aduty = true,
+	aduty = false,
   	clickwarp = false,
 	airBreak = false, 
   	airspeed = 0.5,
@@ -108,6 +108,7 @@ function main()
 	else
 		r_smart_lib_imgui()
 		r_smart_lib_samp_events()
+		resources_init()
 
 		rpc_init()
 		imgui_init()
@@ -119,13 +120,8 @@ function main()
 		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен. Текущая версия: " .. thisScript().version, 0xffa500)
 
 		while true do
-			if not wInfo.spectatemenu.v then -- Search:: Close the window 
-				imgui.Process = wInfo.main.v 
-				imgui.ShowCursor = wInfo.main.v
-			else 
-				imgui.Process = true 
-				imgui.ShowCursor = wInfo.main.v
-			end
+			if not wInfo.spectatemenu.v then imgui.Process = wInfo.main.v else imgui.Process = true end
+			imgui.ShowCursor = wInfo.main.v
 
 			if sampGetChatString(99) == "Server closed the connection." or sampGetChatString(99) == "You are banned from this server." then
 				time = nil
@@ -137,6 +133,7 @@ function main()
 				else
 					scriptInfo.clickwarp = false
 					wInfo.main.v = not wInfo.main.v
+					wInfo.func.v = wInfo.main.v
 
 					if not wInfo.main.v then
 						wInfo.func.v = false
@@ -330,6 +327,40 @@ function main()
 end
 
 -- Search:: Packages
+function resources_init()
+	if not pcall(function() fa = require 'fAwesome5' end) then
+		createDirectory(getGameDirectory().."\\moonloader\\resources")
+
+		local resources_links = {
+			[getGameDirectory().."\\moonloader\\lib\\fAwesome5.lua"] = "https://raw.githubusercontent.com/kennytowN/admin-tools/master/libs/fAwesome5.lua",
+			[getGameDirectory().."\\moonloader\\resources\\fa-solid-900.ttf"] = "https://github.com/FortAwesome/Font-Awesome/blob/master/webfonts/fa-solid-900.ttf?raw=true"
+		}
+
+		for dir, link in pairs(resources_links) do
+			if doesFileExist(dir) then
+				os.remove(dir)
+			end
+
+			downloadUrlToFile(link, dir)
+		end
+
+		local status, err = pcall(function() sampev = require 'lib.samp.events' end)
+		if status then sampAddChatMessage("[Admin Tools]:{FFFFFF} Загрузка ресурсов успешно завершена.", 0xffa500) end
+	else
+		local fa_font = nil
+		local fa_glyph_ranges = imgui.ImGlyphRanges({ fa.min_range, fa.max_range })
+
+		function imgui.BeforeDrawFrame()
+			if fa_font == nil then
+				local font_config = imgui.ImFontConfig() -- to use 'imgui.ImFontConfig.new()' on error
+				font_config.MergeMode = true
+		
+				fa_font = imgui.GetIO().Fonts:AddFontFromFileTTF('moonloader/resources/fa-solid-900.ttf', 13.0, font_config, fa_glyph_ranges)
+			end
+		end
+	end
+end
+
 function r_smart_lib_samp_events()
     if not pcall(function() sampev = require 'lib.samp.events' end) then
       	waiter = true
@@ -498,12 +529,9 @@ function imgui_init()
     }
 
 	function imgui.OnDrawFrame()
-        if wInfo.main.v then drawMain() end
-        if wInfo.info.v then drawInfo() end
-        if wInfo.teleport.v then drawTeleport() end
-		if wInfo.func.v then drawFunctions() end
+		--if wInfo.func.v then drawFunctions() end
+		if wInfo.main.v then drawMain() end
 		if wInfo.spectatemenu.v and sampIsPlayerConnected(recInfo.id) and sampGetPlayerScore(recInfo.id) ~= 0 then drawSpectateMenu() end
-		if wInfo.stats.v then drawStats() end
 	end
 	
 	function imgui.ToggleButton(str_id, bool)
@@ -633,7 +661,7 @@ function imgui_init()
 
 		local width = imgui.GetWindowWidth()
 		local calc = imgui.CalcTextSize(u8(str_id))
-		imgui.SetCursorPosX(width - calc.x - 25)
+		imgui.SetCursorPosX(width - calc.x - 35)
 
 		local rBool = imgui.ToggleButton(u8(str_id), bool)
 		return rBool
@@ -703,68 +731,47 @@ end
 function drawMain()
     local ScreenX, ScreenY = getScreenResolution()
 
-    imgui.SetNextWindowPos(imgui.ImVec2(250, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2 - 300, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
     imgui.Begin(u8'Mailen Tools', wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
 	imgui.BeginChild('###', imgui.ImVec2(165, 300), false)
-		if imgui.Button(u8'Функции', imgui.ImVec2(150, 25)) then
-			wInfo.func.v = not wInfo.func.v
+		if imgui.Button(fa.ICON_FA_TERMINAL ..  u8' Функции', imgui.ImVec2(165, 25)) then
+			wInfo.func.v = true
+			wInfo.teleport.v = false
+			wInfo.stats.v = false
 		end
 
-		if imgui.Button(u8'Статистика', imgui.ImVec2(150, 25)) then 
-			wInfo.stats.v = not wInfo.stats.v
+		if imgui.Button(fa.ICON_FA_USER .. u8' Статистика', imgui.ImVec2(165, 25)) then 
+			wInfo.stats.v = true
+
+			wInfo.func.v = false
+			wInfo.teleport.v = false
 		end
 
-		if imgui.Button(u8'Телепорт-лист', imgui.ImVec2(150, 25)) then 
-			wInfo.teleport.v = not wInfo.teleport.v
+		if imgui.Button(fa.ICON_FA_DOVE .. u8' Телепорт-лист', imgui.ImVec2(165, 25)) then 
+			wInfo.teleport.v = true
+
+			wInfo.func.v = false
+			wInfo.stats.v = false
 		end
 
-		if imgui.Button(u8'О скрипте', imgui.ImVec2(150, 25)) then 
-			wInfo.info.v = not wInfo.info.v
+		if imgui.Button(fa.ICON_FA_LAPTOP_CODE .. u8' Связь с разработчиком',imgui.ImVec2(165,25)) then
+			os.execute('start https://vk.com/unknownus3r')
 		end
 	imgui.EndChild()
 
-	imgui.BeginChild('main')
+	imgui.SameLine()
 
+	imgui.BeginChild('##', imgui.ImVec2(500, 300), true)
+		if wInfo.func.v then drawFunctions() end
+		if wInfo.teleport.v then drawTeleport() end
+		if wInfo.stats.v then drawStats() end 
 	imgui.EndChild()
-
-    --[[if imgui.Button(u8'Функции',imgui.ImVec2(310,25)) then
-        wInfo.func.v = not wInfo.func.v
-    elseif imgui.Button(u8'Статистика',imgui.ImVec2(310,25)) then 
-	   wInfo.stats.v = not wInfo.stats.v
-    elseif imgui.Button(u8'Телепорт-лист',imgui.ImVec2(310,25)) then 
-        wInfo.teleport.v = not wInfo.teleport.v
-    elseif imgui.Button(u8'О скрипте',imgui.ImVec2(310,25)) then 
-        wInfo.info.v = not wInfo.info.v
-	end]]
-
-    imgui.End()
-end
-
-function drawInfo()
-    local ScreenX, ScreenY = getScreenResolution() 
-
-    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 900, ScreenY - 350), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-    imgui.Begin(u8"Информация о скрипте", wInfo.info, imgui.WindowFlags.NoResize)
-
-    imgui.Text(u8'Автор: taichi')
-	imgui.Text(u8'Текущая версия скрипта: ' .. thisScript().version)
-	imgui.Text(u8'\n')
-
-	if imgui.Button(u8'Связь с разработчиком',imgui.ImVec2(310,25)) then
-        os.execute('start https://vk.com/unknownus3r')
-    end
 
     imgui.End()
 end
 
 function drawTeleport()
-    local ScreenX, ScreenY = getScreenResolution() 
-
-    imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 760, ScreenY - 450), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-    imgui.SetNextWindowSize(imgui.ImVec2(300, 100), imgui.Cond.FirstUseEver)
-    imgui.Begin(u8'Телепорт-меню', wInfo.teleport, imgui.WindowFlags.NoResize)
-
 	if imgui.BeginMenu(u8'Важные места') then
 		if imgui.MenuItem(u8'Мэрия') then teleportPlayer(1481.1948,-1742.2594,13.5469)
         elseif imgui.MenuItem(u8'Spawn') then teleportPlayer(1716.4712,-1900.9441,13.5662)
@@ -796,16 +803,9 @@ function drawTeleport()
 
         imgui.EndMenu()
     end
-
-    imgui.End()
 end
 
 function drawFunctions() 
-  	local ScreenX, ScreenY = getScreenResolution() 
-
-	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 1150, ScreenY - 460), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-	imgui.SetNextWindowSize(imgui.ImVec2(400, 475), imgui.Cond.FirstUseEver)
-	imgui.Begin(u8"Функции скрипта", wInfo.func, imgui.WindowFlags.NoResize)
 
 	imgui.Text(u8"Основные функции:")
 	imgui.Separator()
@@ -878,7 +878,7 @@ function drawFunctions()
 	imgui.SameLine()
 
 	if imgui.DrawToggleButtonRight('#_6', 'Wall Hack', ckWallhack) then
-		mainIni.settings.wallhack = ckWallhack.v
+		mainIni.set.wallhack = ckWallhack.v
 		inicfg.save(mainIni, "admintools.ini")
 
 		if ckWallhack.v then nameTagOn() else nameTagOff() end
@@ -926,6 +926,12 @@ function drawFunctions()
 
 	imgui.SameLine()
 
+	if imgui.Button(u8'Выключить скрипт') then
+		thisScript():unload()
+	end
+
+	imgui.SameLine()
+
 	if imgui.Button(u8'Сбросить настройки') then
 		mainIni.settings.themeId = 0
 		mainIni.settings.autoAduty = false
@@ -956,17 +962,9 @@ function drawFunctions()
 		nameTagOff()
 		inicfg.save(mainIni, "admintools.ini")
 	end
-
-	imgui.End()
 end
 	
 function drawStats() 
-	local ScreenX, ScreenY = getScreenResolution() 
-
-  	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 220, ScreenY - 600), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-  	imgui.SetNextWindowSize(imgui.ImVec2(400, 160), imgui.Cond.FirstUseEver)
-	imgui.Begin(u8"Статистика администрирования", wInfo.stats, imgui.WindowFlags.NoResize)
-
 	local statsDiagram = {
         {
             v = mainIni.stats.adutyTime,
@@ -985,11 +983,11 @@ function drawStats()
 	imgui.Text(string.format(u8"Отправлено игроков в Де Морган: %d", mainIni.stats.countJail))
 	imgui.Text(string.format(u8"Количество отключённых игроков: %d", mainIni.stats.countKick))
 	imgui.Text(string.format(u8"Отправлено ответов игрокам: %d", mainIni.stats.countAnswers))
-
-	imgui.End()
 end
 
 function drawSpectateMenu()
+	print("draw")
+
 	local ScreenX, ScreenY = getScreenResolution()
 
 	imgui.SetNextWindowPos(imgui.ImVec2(ScreenX - 350, ScreenY - 400), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
@@ -1545,7 +1543,7 @@ function rpc_init()
 			wInfo.info.v = false
 
 			imgui.Process = true
-			imgui.ShowCursor = fals
+			imgui.ShowCursor = false
 		elseif data.text:find("Exit") then scriptInfo.textdraws.exitId = textdrawId
 		elseif data.text:find("Jerome") then jeromeId = textdrawId end
 	end
