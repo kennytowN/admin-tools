@@ -1,4 +1,4 @@
-script_version('0.3.4-R3')
+script_version('0.3.5')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -1660,14 +1660,14 @@ function rpc_init()
 				addTimeToStatsId:terminate()
 				addTimeToStatsId = nil
 
-				setCharProofs(playerPed, true, true, true, true, true)
-				writeMemory(0x96916E, 1, 1, false)
+				setCharProofs(playerPed, false, false, false, false, false)
+				writeMemory(0x96916E, 1, 0, false)
 			elseif color == -68395776 then
 				scriptInfo.aduty = true 
 				if addTimeToStatsId == nil then addTimeToStatsId = lua_thread.create(addTimeToStats) end
 
-				setCharProofs(playerPed, false, false, false, false, false)
-				writeMemory(0x96916E, 1, 0, false)
+				setCharProofs(playerPed, true, true, true, true, true)
+				writeMemory(0x96916E, 1, 1, false)
 			end
 		end
 	end
