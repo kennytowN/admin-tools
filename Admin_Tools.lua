@@ -1,4 +1,4 @@
-script_version('0.3.7')
+script_version('0.3.7-R2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -92,27 +92,27 @@ local mainIni = inicfg.load({
 inicfg.save(mainIni, "admintools.ini")
 
 function main()
-	while not isSampAvailable() do wait(200) end
-	while not sampIsLocalPlayerSpawned() do wait(1) end
+	while not isSampAvailable() or not sampIsLocalPlayerSpawned() do wait(200) end
+	while sampGetCurrentServerName() == "SA-MP" do wait(200) end
 
 	sampRegisterChatCommand("rec", function(arg)
 		time = tonumber(arg)
 		res = true
 	end)
 
-	autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
-
-	if sampGetPlayerColor(getLocalPlayerId()) == 16510045 then 
-		scriptInfo.aduty = true
-		addTimeToStatsId = lua_thread.create(addTimeToStats) 
-
-		setCharProofs(playerPed, true, true, true, true, true)
-		writeMemory(0x96916E, 1, 1, true)
-	end
-
 	if not sampGetCurrentServerName():find("Mailen Role Play") then
 		thisScript():unload()
 	else
+		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
+
+		if sampGetPlayerColor(getLocalPlayerId()) == 16510045 then 
+			scriptInfo.aduty = true
+			addTimeToStatsId = lua_thread.create(addTimeToStats) 
+
+			setCharProofs(playerPed, true, true, true, true, true)
+			writeMemory(0x96916E, 1, 1, true)
+		end
+
 		r_smart_lib_imgui()
 		r_smart_lib_samp_events()
 		resources_init()
@@ -314,27 +314,27 @@ function main()
 
 								-- teleport!
 								if isKeyDown(key.VK_LBUTTON) then
-								  if tpIntoCar then
+									if tpIntoCar then
 									if not jumpIntoCar(tpIntoCar) then
-									  -- teleport to the car if there is no free seats
-									  teleportPlayer(pos.x, pos.y, pos.z)
+										-- teleport to the car if there is no free seats
+										teleportPlayer(pos.x, pos.y, pos.z)
 									end
-								  else
+									else
 									if isCharInAnyCar(playerPed) then
-									  local norm = Vector3D(colpoint.normal[1], colpoint.normal[2], 0)
-									  local norm2 = Vector3D(colpoint2.normal[1], colpoint2.normal[2], colpoint2.normal[3])
-									  rotateCarAroundUpAxis(storeCarCharIsInNoSave(playerPed), norm2)
-									  pos = pos - norm * 1.8
-									  pos.z = pos.z - 0.8
+										local norm = Vector3D(colpoint.normal[1], colpoint.normal[2], 0)
+										local norm2 = Vector3D(colpoint2.normal[1], colpoint2.normal[2], colpoint2.normal[3])
+										rotateCarAroundUpAxis(storeCarCharIsInNoSave(playerPed), norm2)
+										pos = pos - norm * 1.8
+										pos.z = pos.z - 0.8
 									end
 									teleportPlayer(pos.x, pos.y, pos.z)
-								  end
+									end
 
-								  scriptInfo.clickwarp = false
-								  removePointMarker()
-				  
-								  while isKeyDown(key.VK_LBUTTON) do wait(0) end
-								  showCursor(false)
+									scriptInfo.clickwarp = false
+									removePointMarker()
+					
+									while isKeyDown(key.VK_LBUTTON) do wait(0) end
+									showCursor(false)
 								end
 							end
 						end
@@ -1746,6 +1746,8 @@ function rpc_init()
 
 				setCharProofs(playerPed, false, false, false, false, false)
 				writeMemory(0x96916E, 1, 0, false)
+
+				nameTagOff()
 			elseif color == -68395776 then
 				scriptInfo.aduty = true 
 				if addTimeToStatsId == nil then addTimeToStatsId = lua_thread.create(addTimeToStats) end
