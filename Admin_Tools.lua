@@ -1,4 +1,4 @@
-script_version('0.3.6-R2')
+script_version('0.3.6-R3')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -67,6 +67,7 @@ local mainIni = inicfg.load({
 		reconAlert = false,
 		supportsAnswers = true,
 		spectateUI = true,
+		autoReconnect = false,
 		password = "",
 		themeId = 0,
 		airspeed = 0.5
@@ -107,6 +108,8 @@ function main()
 
 		setCharProofs(playerPed, true, true, true, true, true)
 		writeMemory(0x96916E, 1, 1, true)
+
+		if ckWallhack.v then nameTagOn() end
 	end
 
 	--if sampGetCurrentServerAddress() ~= "37.230.162.117" then
@@ -130,9 +133,11 @@ function main()
 			if not wInfo.spectatemenu.v then imgui.Process = wInfo.main.v else imgui.Process = true end
 			imgui.ShowCursor = wInfo.main.v
 
-			if sampGetChatString(99) == "Server closed the connection." or sampGetChatString(99) == "You are banned from this server." then
-				time = nil
-				res = true
+			if mainIni.settings.autoReconnect then
+				if sampGetChatString(99) == "Server closed the connection." or sampGetChatString(99) == "You are banned from this server." then
+					time = nil
+					res = true
+				end
 			end
 
 			if isKeyJustPressed(key.VK_F9) then -- Activate:: Main window
@@ -148,6 +153,8 @@ function main()
 						wInfo.settings.v = false
 						wInfo.info.v = false
 						wInfo.teleport.v = false
+
+						imgui.ShowCursor = false
 					else
 						imgui.ShowCursor = true
 					end
@@ -518,6 +525,7 @@ function imgui_init()
 	ckTraicers = imgui.ImBool(mainIni.set.traicers)
   
 	-- Search:: Variables settings
+	ckAutoReconnect = imgui.ImBool(mainIni.settings.autoReconnect)
 	ckThemeId = imgui.ImInt(mainIni.settings.themeId)
 	ckFixFindZ = imgui.ImBool(mainIni.settings.fixFindZ)
 	ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
@@ -526,7 +534,6 @@ function imgui_init()
  	ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
   
 	apply_custom_style(mainIni.settings.themeId)
-	if ckWallhack.v then nameTagOn() end
 
 	function imgui.TextQuestion(text)
 		imgui.TextDisabled('(?)')
@@ -945,6 +952,14 @@ function drawFunctions()
 
 	if imgui.DrawToggleButtonRight('#_8', 'ТП по курсору', ckClickWarp) then 
 		mainIni.set.clickwarp = ckClickWarp.v
+		inicfg.save(mainIni, "admintools.ini")
+	end
+
+	imgui.TextQuestion(u8"Автоматически переподключаться на сервер в случае утраты соединения.")
+	imgui.SameLine()
+
+	if imgui.DrawToggleButtonRight('#12', 'Auto Reconnect', ckAutoReconnect) then 
+		mainIni.set.autoReconnect = ckAutoReconnect.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
@@ -1759,6 +1774,8 @@ function rpc_init()
 				wait(1000)
 				sampSendChat('/aduty')
 			end)
+
+			if ckWallhack.v then nameTagOn() end
 		elseif text:find("Во время слежки") then
 			wInfo.spectatemenu.v = false
 			resetSpectateInfo()
