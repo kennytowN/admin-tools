@@ -1,4 +1,4 @@
-script_version('0.3.6-R4')
+script_version('0.3.7')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -108,8 +108,6 @@ function main()
 
 		setCharProofs(playerPed, true, true, true, true, true)
 		writeMemory(0x96916E, 1, 1, true)
-
-		if mainIni.set.wallhack then nameTagOn() end
 	end
 
 	if not sampGetCurrentServerName():find("Mailen Role Play") then
@@ -1748,8 +1746,6 @@ function rpc_init()
 
 				setCharProofs(playerPed, false, false, false, false, false)
 				writeMemory(0x96916E, 1, 0, false)
-
-				nameTagOff()
 			elseif color == -68395776 then
 				scriptInfo.aduty = true 
 				if addTimeToStatsId == nil then addTimeToStatsId = lua_thread.create(addTimeToStats) end
