@@ -1,4 +1,4 @@
-script_version('0.3.7-R2')
+script_version('0.3.8')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -100,6 +100,14 @@ function main()
 		res = true
 	end)
 
+	r_smart_lib_imgui()
+	r_smart_lib_samp_events()
+	resources_init()
+
+	rpc_init()
+	imgui_init()
+	initializeRender()
+
 	if not sampGetCurrentServerName():find("Mailen Role Play") then
 		thisScript():unload()
 	else
@@ -112,14 +120,6 @@ function main()
 			setCharProofs(playerPed, true, true, true, true, true)
 			writeMemory(0x96916E, 1, 1, true)
 		end
-
-		r_smart_lib_imgui()
-		r_smart_lib_samp_events()
-		resources_init()
-
-		rpc_init()
-		imgui_init()
-		initializeRender()
 
 		mainIni.stats.adutyTime = 0
 		mainIni.stats.afkTime = 0
@@ -171,10 +171,7 @@ function main()
 			end
 
 			if scriptInfo.aduty then
-				--setCharProofs(playerPed, true, true, true, true, true)
-				--writeMemory(0x96916E, 1, 1, true)
-
-				if isKeyDown(key.VK_MBUTTON) and ckClickWarp.v then -- Activate:: Clickwarp
+				if isKeyDown(key.VK_MBUTTON) and ckClickWarp.v and not sampIsChatInputActive() and not isSampfuncsConsoleActive() then -- Activate:: Clickwarp
 					scriptInfo.clickwarp = not scriptInfo.clickwarp
 					cursorEnabled = scriptInfo.clickwarp
 					showCursor(cursorEnabled)
@@ -1651,23 +1648,19 @@ function getLocalPlayerId()
 end
 
 function nameTagOn()
-    local pStSet = sampGetServerSettingsPtr()
-    memory.setfloat(pStSet + 39, 1488.0)
-    memory.setint8(pStSet + 47, 0)
-    memory.setint8(pStSet + 56, 1)
+	local pStSet = sampGetServerSettingsPtr()
+	activeWH = true
+	memory.setfloat(pStSet + 39, 1488.0)
+	memory.setint8(pStSet + 47, 0)
+	memory.setint8(pStSet + 56, 1)
 end
 
 function nameTagOff()
-    local pStSet = sampGetServerSettingsPtr()
-    memory.setfloat(pStSet + 39, 50.0)
-    memory.setint8(pStSet + 47, 1)
-    memory.setint8(pStSet + 56, 1)
-end
-
-function ClearChat()
-    memory.fill(sampGetChatInfoPtr() + 306, 0x0, 25200, false)
-    setStructElement(sampGetChatInfoPtr() + 306, 25562, 4, true, false)
-    memory.write(sampGetChatInfoPtr() + 0x63DA, 1, 1, false)
+	local pStSet = sampGetServerSettingsPtr()
+	activeWH = false
+	memory.setfloat(pStSet + 39, 50.0)
+	memory.setint8(pStSet + 47, 0)
+	memory.setint8(pStSet + 56, 1)
 end
 
 -- Search:: SA:MP Events
@@ -1698,7 +1691,7 @@ function rpc_init()
 	end
 
 	function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-		if dialogId ~= 65535 and title:find("Ввод пароля") and ckAutoLogin and mainIni.settings.password ~= "" then
+		if dialogId ~= 65535 and title:find("Ввод пароля") and ckAutoLogin.v and mainIni.settings.password ~= "" then
 			sampSendDialogResponse(dialogId, 1, -1, mainIni.settings.password)
 			return false
 		end
@@ -1768,8 +1761,9 @@ function rpc_init()
 			elseif not mainIni.settings.reconAlert then
 				return false
 			end
-		elseif text:find("[A] Хелпер") and text:find("->") and not mainIni.settings.supportsAnswers then
-			return false
+		elseif text:find("[A] Хелпер") and text:find("->") then
+			print(mainIni.settings.supportsAnswers)
+			if not not mainIni.settings.supportsAnswers then return false end
 		elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(getLocalPlayerId()) ~= 16510045 then
 			lua_thread.create(function() 
 				wait(1000)
