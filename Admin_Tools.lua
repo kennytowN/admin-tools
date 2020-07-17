@@ -1,4 +1,4 @@
-script_version('0.3.8')
+script_version('0.3.8-R2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -100,18 +100,19 @@ function main()
 		res = true
 	end)
 
-	r_smart_lib_imgui()
 	r_smart_lib_samp_events()
-	resources_init()
-
 	rpc_init()
-	imgui_init()
-	initializeRender()
 
 	if not sampGetCurrentServerName():find("Mailen Role Play") then
 		thisScript():unload()
 	else
 		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
+
+		r_smart_lib_imgui()
+		resources_init()
+
+		imgui_init()
+		initializeRender()
 
 		if sampGetPlayerColor(getLocalPlayerId()) == 16510045 then 
 			scriptInfo.aduty = true
@@ -127,6 +128,8 @@ function main()
 		sampAddChatMessage("[Admin Tools]:{FFFFFF} Скрипт успешно загружен. Текущая версия: " .. thisScript().version, 0xffa500)
 
 		while true do
+			memory.setint8(0xB7CEE4, 1) -- Infinite run
+
 			if not wInfo.spectatemenu.v then imgui.Process = wInfo.main.v else imgui.Process = true end
 			imgui.ShowCursor = wInfo.main.v
 
@@ -1665,6 +1668,16 @@ end
 
 -- Search:: SA:MP Events
 function rpc_init()
+	function sampev.onPlayerQuit(playerid, reason)
+		local reasons = {
+			[0] = 'вылетел/краш',
+			[1] = 'вышел',
+			[2] = 'кикнут/заблокирован'
+		}
+
+		addAdminLog(string.format("%s[%d] отсоединён (%s)", sampGetPlayerNickname(playerid), playerid, reasons[reason]))
+	end
+
 	function sampev.onSendMapMarker(position)
 		if scriptInfo.aduty and ckFixFindZ.v then
 			ignoreMessage = true
