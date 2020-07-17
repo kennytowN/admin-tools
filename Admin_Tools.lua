@@ -1,4 +1,4 @@
-script_version('0.3.8-R2')
+script_version('0.3.8-R3')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -1704,7 +1704,7 @@ function rpc_init()
 	end
 
 	function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-		if dialogId ~= 65535 and title:find("¬вод парол€") and ckAutoLogin.v and mainIni.settings.password ~= "" then
+		if dialogId ~= 65535 and title:find("¬вод парол€") and mainIni.settings.autologin and mainIni.settings.password ~= "" then
 			sampSendDialogResponse(dialogId, 1, -1, mainIni.settings.password)
 			return false
 		end
