@@ -1,4 +1,4 @@
-script_version('0.3.9')
+script_version('0.4.0')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -65,7 +65,6 @@ local mainIni = inicfg.load({
     	autologin = false,
 		showpass = false,
 		reconAlert = false,
-		supportsAnswers = true,
 		spectateUI = true,
 		autoReconnect = false,
 		password = "",
@@ -174,19 +173,19 @@ function main()
 			end
 
 			if scriptInfo.aduty then
-				if isKeyJustPressed(key.VK_R) and not sampIsChatInputActive() and not isSampfuncsConsoleActive() and recInfo.id ~= -1 then
+				if isKeyJustPressed(key.VK_R) and not sampIsDialogActive() and not sampIsChatInputActive() and not isSampfuncsConsoleActive() and recInfo.id ~= -1 then
 					sampSendClickTextdraw(scriptInfo.textdraws.refreshId)
 					printStringNow('UPDATE RECON', 1500)
 				end
 
-				if isKeyDown(key.VK_MBUTTON) and ckClickWarp.v and not sampIsChatInputActive() and not isSampfuncsConsoleActive() then -- Activate:: Clickwarp
+				if isKeyDown(key.VK_MBUTTON) and ckClickWarp.v and and not sampIsDialogActive() and not sampIsChatInputActive() and not isSampfuncsConsoleActive() then -- Activate:: Clickwarp
 					scriptInfo.clickwarp = not scriptInfo.clickwarp
 					cursorEnabled = scriptInfo.clickwarp
 					showCursor(cursorEnabled)
 					while isKeyDown(key.VK_MBUTTON) do wait(80) end
 				end
 
-				if isKeyJustPressed(key.VK_RSHIFT) and ckAirBreak.v and not sampIsChatInputActive() and not isSampfuncsConsoleActive() then -- Activate:: Airbreak
+				if isKeyJustPressed(key.VK_RSHIFT) and ckAirBreak.v and not sampIsDialogActive() and not sampIsChatInputActive() and not isSampfuncsConsoleActive() then -- Activate:: Airbreak
 					scriptInfo.airbreak = not scriptInfo.airbreak
 
 					if scriptInfo.airbreak then
@@ -212,7 +211,7 @@ function main()
 
 				local time = os.clock() * 1000
 				if scriptInfo.airbreak then -- Аирбрейк
-					if not sampIsChatInputActive() and not isSampfuncsConsoleActive() then
+					if not sampIsChatInputActive() and not isSampfuncsConsoleActive() and not sampIsDialogActive() then
 						if isCharInAnyCar(playerPed) then heading = getCarHeading(storeCarCharIsInNoSave(playerPed))
 						else heading = getCharHeading(playerPed) end
 						local camCoordX, camCoordY, camCoordZ = getActiveCameraCoordinates()
@@ -531,7 +530,6 @@ function imgui_init()
 	ckThemeId = imgui.ImInt(mainIni.settings.themeId)
 	ckFixFindZ = imgui.ImBool(mainIni.settings.fixFindZ)
 	ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
-	ckSupportsAnswers = imgui.ImBool(mainIni.settings.supportsAnswers)
 	ckReconAlert = imgui.ImBool(mainIni.settings.reconAlert)
  	ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
   
@@ -923,14 +921,6 @@ function drawFunctions()
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
-	imgui.TextQuestion(u8'Будут ли показываться ответы от игровых помощников?')
-	imgui.SameLine()
-
-	if imgui.DrawToggleButtonRight('#_5', 'Ответы от саппортов', ckSupportsAnswers) then
-		mainIni.settings.supportsAnswers = ckSupportsAnswers.v
-		inicfg.save(mainIni, "admintools.ini")
-	end
-
 	imgui.TextQuestion(u8"Позволяет видеть игроков сквозь стены")
 	imgui.SameLine()
 
@@ -1058,7 +1048,6 @@ function drawFunctions()
 		mainIni.settings.autoAduty = false
 		mainIni.settings.autologin = false
 		mainIni.settings.reconAlert = false
-		mainIni.settings.supportsAnswers = true
 		mainIni.settings.password = ""
 
 		mainIni.set.wallhack = false
@@ -1077,7 +1066,6 @@ function drawFunctions()
 
 		ckFixFindZ = imgui.ImBool(mainIni.settings.fixFindZ)
 		ckAutoLogin = imgui.ImBool(mainIni.settings.autologin)
-		ckSupportsAnswers = imgui.ImBool(mainIni.settings.supportsAnswers)
 		ckReconAlert = imgui.ImBool(mainIni.settings.reconAlert)
 		ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
 
@@ -1779,9 +1767,6 @@ function rpc_init()
 			elseif not mainIni.settings.reconAlert then
 				return false
 			end
-		elseif text:find("[A] Хелпер") and text:find("->") then
-			print(mainIni.settings.supportsAnswers)
-			if not not mainIni.settings.supportsAnswers then return false end
 		elseif text:find("Надеемся, что вы") and ckAutoAduty.v and sampGetPlayerColor(getLocalPlayerId()) ~= 16510045 then
 			lua_thread.create(function() 
 				wait(1000)
