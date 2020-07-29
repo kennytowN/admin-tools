@@ -1,4 +1,4 @@
-script_version('0.4.0')
+script_version('0.4.0-R2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -178,7 +178,7 @@ function main()
 					printStringNow('UPDATE RECON', 1500)
 				end
 
-				if isKeyDown(key.VK_MBUTTON) and ckClickWarp.v and and not sampIsDialogActive() and not sampIsChatInputActive() and not isSampfuncsConsoleActive() then -- Activate:: Clickwarp
+				if isKeyDown(key.VK_MBUTTON) and ckClickWarp.v and not sampIsDialogActive() and not sampIsChatInputActive() and not isSampfuncsConsoleActive() then -- Activate:: Clickwarp
 					scriptInfo.clickwarp = not scriptInfo.clickwarp
 					cursorEnabled = scriptInfo.clickwarp
 					showCursor(cursorEnabled)
