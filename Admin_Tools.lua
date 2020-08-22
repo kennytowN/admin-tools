@@ -1,4 +1,4 @@
-script_version('0.4.0-R2')
+script_version('0.4.1')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -7,6 +7,65 @@ local encoding			 	= require 'encoding'
 local Matrix3X3 			= require "matrix3x3"
 local Vector3D 				= require "vector3d"
 local inicfg 				= require 'inicfg'
+
+-- Dual Monitor Fix
+local ffi = require('ffi')
+local wm  = require('lib.windows.message')
+
+ffi.cdef [[
+	typedef unsigned long HANDLE;
+	typedef HANDLE HWND;
+	typedef struct _RECT {
+		long left;
+		long top;
+		long right;
+		long bottom;
+	} RECT, *PRECT;
+
+	HWND GetActiveWindow(void);
+
+	bool GetWindowRect(
+		HWND   hWnd,
+		PRECT lpRect
+	);
+
+	bool ClipCursor(const RECT *lpRect);
+
+	bool GetClipCursor(PRECT lpRect);
+]]
+
+local rcClip, rcOldClip = ffi.new('RECT'), ffi.new('RECT')
+-- Dual Monitor Fix
+
+-- MapLimit 260
+local addrCmp, addrSet = 0x00577993, 0x005779FA
+
+-- GTA loading patch
+function patch()
+	if memory.getuint8(0x748C2B) == 0xE8 then
+		memory.fill(0x748C2B, 0x90, 5, true)
+	elseif memory.getuint8(0x748C7B) == 0xE8 then
+		memory.fill(0x748C7B, 0x90, 5, true)
+	end
+	if memory.getuint8(0x5909AA) == 0xBE then
+		memory.write(0x5909AB, 1, 1, true)
+	end
+	if memory.getuint8(0x590A1D) == 0xBE then
+		memory.write(0x590A1D, 0xE9, 1, true)
+		memory.write(0x590A1E, 0x8D, 4, true)
+	end
+	if memory.getuint8(0x748C6B) == 0xC6 then
+		memory.fill(0x748C6B, 0x90, 7, true)
+	elseif memory.getuint8(0x748CBB) == 0xC6 then
+		memory.fill(0x748CBB, 0x90, 7, true)
+	end
+	if memory.getuint8(0x590AF0) == 0xA1 then
+		memory.write(0x590AF0, 0xE9, 1, true)
+		memory.write(0x590AF1, 0x140, 4, true)
+	end
+end
+
+patch()
 
 encoding.default = 'cp1251'
 u8 = encoding.UTF8
@@ -28,9 +87,9 @@ local recInfo = {
 }
 
 local scriptInfo = {
-	buttonId = 1,
-	aduty = false,
-  	clickwarp = false,
+	aduty = true,
+	clickwarp = false,
+	setMarker = false,
 	airBreak = false,
 
   	textdraws = {
@@ -93,6 +152,19 @@ inicfg.save(mainIni, "admintools.ini")
 function main()
 	while not isSampAvailable() or not sampIsLocalPlayerSpawned() do wait(200) end
 	while sampGetCurrentServerName() == "SA-MP" do wait(200) end
+
+	-- Dual Monitor Fix
+	ffi.C.GetWindowRect(ffi.C.GetActiveWindow(), rcClip);
+	ffi.C.ClipCursor(rcClip);
+	  
+	-- mapLimit260
+	local limit = ffi.new("float[1]", 260.0)
+
+	origCmp = readMemory(addrCmp, 4, true)
+	origSet = readMemory(addrSet, 4, true)
+
+	writeMemory(addrCmp, 4, tonumber(ffi.cast("intptr_t", limit)), true)
+	writeMemory(addrSet, 4, representFloatAsInt(limit[0]), true)
 
 	sampRegisterChatCommand("rec", function(arg)
 		time = tonumber(arg)
@@ -160,12 +232,14 @@ function main()
 				end
 			end
 
-			if res and time ~= nil then
+			if res and time ~= nil then -- Reconnect
+				cleanStreamMemory(false)
 				sampDisconnectWithReason(quit)
 				wait(time*1000)
 				sampSetGamestate(1)
 				res = false
 			elseif res and time == nil then
+				cleanStreamMemory(false)
 				sampDisconnectWithReason(quit)
 				wait(1000)
 				sampSetGamestate(1)
@@ -263,7 +337,7 @@ function main()
 						end
 					else
 						if isCharInAnyCar(playerPed) then difference = 0.79 else difference = 1.0 end
-						setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3] - difference)
+						setCharCoordinates(playerPed, airBrkCoords[1], airBrkCoords[2], airBrkCoords[3])
 					end
 				end
 
@@ -349,6 +423,25 @@ function main()
 			wait(0)
 			removePointMarker()
 		end
+	end
+end
+
+-- Map limit 260
+function onExitThread()
+	if origCmp and origSet then
+		writeMemory(addrCmp, 4, origCmp, true)
+		writeMemory(addrSet, 4, origSet, true)
+	end
+end
+
+-- Search: SA:MP Fixes
+function onWindowMessage(msg, wparam, lparam)
+	if msg == wm.WM_KILLFOCUS then
+		ffi.C.GetClipCursor(rcOldClip);
+		ffi.C.ClipCursor(rcOldClip);
+	elseif msg == wm.WM_SETFOCUS then
+		ffi.C.GetWindowRect(ffi.C.GetActiveWindow(), rcClip);
+		ffi.C.ClipCursor(rcClip);
 	end
 end
 
@@ -1072,11 +1165,15 @@ function drawFunctions()
 		nameTagOff()
 		inicfg.save(mainIni, "admintools.ini")
 	end
+
+	if imgui.Button(u8'Очистить память стрима') then
+		cleanStreamMemory(true)
+	end
 end
 
 function drawMagazine()
 	if #logAdmin == 0 then
-		imgui.Text(u8'Журнал пуст...')
+		imgui.Text(u8'В данный момент в журнале отсутствуют записи.')
 	else
 		imgui.Text(u8"Поиск по журналу:"); imgui.SameLine()
 		imgui.InputText(u8'#########', temp_buffers.findMagazine)
@@ -1618,6 +1715,24 @@ function addAdminLog(string)
 	logAdmin[#logAdmin+1] = string.format("[%s] %s", os.date("%H:%M:%S"), string)
 end
 
+function cleanStreamMemory(message)
+	local huy = callFunction(0x53C500, 2, 2, true, true)
+	local huy1 = callFunction(0x53C810, 1, 1, true)
+	local huy2 = callFunction(0x40CF80, 0, 0)
+	local huy3 = callFunction(0x4090A0, 0, 0)
+	local huy4 = callFunction(0x5A18B0, 0, 0)
+	local huy5 = callFunction(0x707770, 0, 0)
+	
+	local pX, pY, pZ = getCharCoordinates(PLAYER_PED)
+	requestCollision(pX, pY)
+	loadScene(pX, pY, pZ)
+
+	if message then 
+		sampAddChatMessage("Очистка памяти стрима прошла успешно.", -1)
+		sampAddChatMessage("Автор: Azller Lollison. Отдельное спасибо DarkP1xel`у.", -1)
+	end
+end
+
 function SecondsToClock(seconds)
 	local seconds = tonumber(seconds)
   
@@ -1645,18 +1760,35 @@ end
 
 function nameTagOn()
 	local pStSet = sampGetServerSettingsPtr()
+	NTdist = mem.getfloat(pStSet + 39) -- РґР°Р»СЊРЅРѕСЃС‚СЊ
+	NTwalls = mem.getint8(pStSet + 47) -- РІРёРґРёРјРѕСЃС‚СЊ С‡РµСЂРµР· СЃС‚РµРЅС‹
+	NTshow = mem.getint8(pStSet + 56) -- РІРёРґРёРјРѕСЃС‚СЊ С‚РµРіРѕРІ
+	mem.setfloat(pStSet + 39, 1488.0)
+	mem.setint8(pStSet + 47, 0)
+	mem.setint8(pStSet + 56, 1)
+end
+
+function nameTagOn()
+	local pStSet = sampGetServerSettingsPtr()
 	activeWH = true
-	memory.setfloat(pStSet + 39, 1488.0)
-	memory.setint8(pStSet + 47, 0)
-	memory.setint8(pStSet + 56, 1)
+
+	NTdist = mem.getfloat(pStSet + 39) -- default value
+	NTwalls = mem.getint8(pStSet + 47) -- default value
+	NTshow = mem.getint8(pStSet + 56) -- default value
+
+	mem.setfloat(pStSet + 39, 1488.0)
+	mem.setint8(pStSet + 47, 0)
+	mem.setint8(pStSet + 56, 1)
 end
 
 function nameTagOff()
 	local pStSet = sampGetServerSettingsPtr()
+
 	activeWH = false
-	memory.setfloat(pStSet + 39, 50.0)
-	memory.setint8(pStSet + 47, 0)
-	memory.setint8(pStSet + 56, 1)
+
+	mem.setfloat(pStSet + 39, NTdist)
+	mem.setint8(pStSet + 47, NTwalls)
+	mem.setint8(pStSet + 56, NTshow)
 end
 
 -- Search:: SA:MP Events
@@ -1671,14 +1803,20 @@ function rpc_init()
 		addAdminLog(string.format("%s[%d] отсоединён (%s)", sampGetPlayerNickname(playerid), playerid, reasons[reason]))
 	end
 
-	function sampev.onSendMapMarker(position)
-		if scriptInfo.aduty and ckFixFindZ.v then
-			ignoreMessage = true
+	function sampev.onSetPlayerPos(position)
+		if scriptInfo.setMarker then 
+			scriptInfo.setMarker = false 
+
 			local _, x, y, z = getTargetBlipCoordinatesFixed()
 			setCharCoordinates(PLAYER_PED, x, y, z)
-			sampSendChat('/vw 0')
-				
+
 			return false
+		end
+	end
+
+	function sampev.onSendMapMarker(position)
+		if scriptInfo.aduty and ckFixFindZ.v then 
+			scriptInfo.setMarker = true 
 		end
 	end
 
@@ -1793,9 +1931,6 @@ function rpc_init()
 				wInfo.spectatemenu.v = false
 				resetSpectateInfo()
 			end
-		elseif text:find("Вы переместились в виртуальный мир #0") and ignoreMessage then
-			ignoreMessage = nil
-			return false
 		elseif text:find(sampGetPlayerNickname(getLocalPlayerId())) and text:find("->") then
 			mainIni.stats.countAnswers = mainIni.stats.countAnswers + 1
 			inicfg.save(mainIni, "admintools.ini")
