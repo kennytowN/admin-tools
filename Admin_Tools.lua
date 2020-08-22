@@ -1,4 +1,4 @@
-script_version('0.4.1')
+script_version('0.4.1-R2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -87,7 +87,7 @@ local recInfo = {
 }
 
 local scriptInfo = {
-	aduty = true,
+	aduty = false,
 	clickwarp = false,
 	setMarker = false,
 	airBreak = false,
@@ -126,6 +126,7 @@ local mainIni = inicfg.load({
 		reconAlert = false,
 		spectateUI = true,
 		autoReconnect = false,
+		autoUpdate = true,
 		password = "",
 		themeId = 0,
 		airspeed = 0.5
@@ -177,7 +178,9 @@ function main()
 	if not sampGetCurrentServerName():find("Mailen Role Play") then
 		thisScript():unload()
 	else
-		autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua")
+		if mainIni.settings.autoUpdate then
+			autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua", false)
+		end
 
 		r_smart_lib_imgui()
 		resources_init()
@@ -619,6 +622,7 @@ function imgui_init()
 	ckTraicers = imgui.ImBool(mainIni.set.traicers)
   
 	-- Search:: Variables settings
+	ckAutoUpdate = imgui.ImBool(mainIni.settings.autoUpdate)
 	ckAutoReconnect = imgui.ImBool(mainIni.settings.autoReconnect)
 	ckThemeId = imgui.ImInt(mainIni.settings.themeId)
 	ckFixFindZ = imgui.ImBool(mainIni.settings.fixFindZ)
@@ -1048,6 +1052,14 @@ function drawFunctions()
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
+	imgui.TextQuestion(u8"Автоматически переподключаться на сервер в случае утраты соединения.")
+	imgui.SameLine()
+
+	if imgui.DrawToggleButtonRight('#13', 'Автообновление', ckAutoUpdate) then 
+		mainIni.settings.autoUpdate = ckAutoUpdate.v
+		inicfg.save(mainIni, "admintools.ini")
+	end
+
 	imgui.Text('\n')
 	imgui.Subtitle('UI Settings', 30)
 	imgui.Text(u8"\n")
@@ -1168,6 +1180,15 @@ function drawFunctions()
 
 	if imgui.Button(u8'Очистить память стрима') then
 		cleanStreamMemory(true)
+	end
+
+	imgui.SameLine()
+
+	if imgui.Button(u8'Проверить обновления скрипта') then
+		lua_thread.create(function() 
+			wait(1000)
+			autoupdate("https://raw.githubusercontent.com/kennytowN/admin-tools/master/admin-tools.json", "https://raw.githubusercontent.com/kennytowN/admin-tools/master/Admin_Tools.lua", true)
+		end)
 	end
 end
 
@@ -2003,7 +2024,7 @@ function addTimeToStats()
 end
 
 -- Search:: Autoupdates
-function autoupdate(json_url, url)
+function autoupdate(json_url, url, user)
 	local json = getWorkingDirectory() .. '\\admin-tools.json'
 	if doesFileExist(json) then os.remove(json) end
 
@@ -2031,6 +2052,10 @@ function autoupdate(json_url, url)
 						end)
 					end)
 				else
+					if user then 
+						sampAddChatMessage(string.format("[Admin Tools]:{FFFFFF} Обновления не найдены. Текущая версия скрипта: %s.", thisScript().version), 0xffa500)
+					end
+
 					update = false
 				end
 			end
