@@ -1,4 +1,4 @@
-script_version('0.4.1-R3')
+script_version('0.4.2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -1781,25 +1781,25 @@ end
 
 function nameTagOn()
 	local pStSet = sampGetServerSettingsPtr()
-	NTdist = mem.getfloat(pStSet + 39) -- дальность
-	NTwalls = mem.getint8(pStSet + 47) -- видимость через стены
-	NTshow = mem.getint8(pStSet + 56) -- видимость тегов
-	mem.setfloat(pStSet + 39, 1488.0)
-	mem.setint8(pStSet + 47, 0)
-	mem.setint8(pStSet + 56, 1)
+	NTdist = memory.getfloat(pStSet + 39) -- дальность
+	NTwalls = memory.getint8(pStSet + 47) -- видимость через стены
+	NTshow = memory.getint8(pStSet + 56) -- видимость тегов
+	memory.setfloat(pStSet + 39, 1488.0)
+	memory.setint8(pStSet + 47, 0)
+	memory.setint8(pStSet + 56, 1)
 end
 
 function nameTagOn()
 	local pStSet = sampGetServerSettingsPtr()
 	activeWH = true
 
-	NTdist = mem.getfloat(pStSet + 39) -- default value
-	NTwalls = mem.getint8(pStSet + 47) -- default value
-	NTshow = mem.getint8(pStSet + 56) -- default value
+	NTdist = memory.getfloat(pStSet + 39) -- default value
+	NTwalls = memory.getint8(pStSet + 47) -- default value
+	NTshow = memory.getint8(pStSet + 56) -- default value
 
-	mem.setfloat(pStSet + 39, 1488.0)
-	mem.setint8(pStSet + 47, 0)
-	mem.setint8(pStSet + 56, 1)
+	memory.setfloat(pStSet + 39, 1488.0)
+	memory.setint8(pStSet + 47, 0)
+	memory.setint8(pStSet + 56, 1)
 end
 
 function nameTagOff()
@@ -1807,9 +1807,9 @@ function nameTagOff()
 
 	activeWH = false
 
-	mem.setfloat(pStSet + 39, NTdist)
-	mem.setint8(pStSet + 47, NTwalls)
-	mem.setint8(pStSet + 56, NTshow)
+	memory.setfloat(pStSet + 39, NTdist)
+	memory.setint8(pStSet + 47, NTwalls)
+	memory.setint8(pStSet + 56, NTshow)
 end
 
 -- Search:: SA:MP Events
