@@ -1,4 +1,4 @@
-script_version('0.4.1-R2')
+script_version('0.4.1-R3')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -1052,7 +1052,7 @@ function drawFunctions()
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
-	imgui.TextQuestion(u8"Автоматически переподключаться на сервер в случае утраты соединения.")
+	imgui.TextQuestion(u8"Автоматически проверять обновления при входе в игру.")
 	imgui.SameLine()
 
 	if imgui.DrawToggleButtonRight('#13', 'Автообновление', ckAutoUpdate) then 
