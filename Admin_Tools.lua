@@ -1,4 +1,4 @@
-script_version('0.4.3')
+script_version('0.4.4')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -151,6 +151,8 @@ function main()
 	while not isSampAvailable() or not sampIsLocalPlayerSpawned() do wait(200) end
 	while sampGetCurrentServerName() == "SA-MP" do wait(200) end
 
+	local font = renderCreateFont('Arial', 8, 5)
+
 	-- Dual Monitor Fix
 	ffi.C.GetWindowRect(ffi.C.GetActiveWindow(), rcClip);
 	ffi.C.ClipCursor(rcClip);
@@ -194,6 +196,26 @@ function main()
 
 			if not wInfo.spectatemenu.v then imgui.Process = wInfo.main.v else imgui.Process = true end
 			imgui.ShowCursor = wInfo.main.v
+
+			-- Custom arguments render
+			if sampIsChatInputActive() then 
+				local s = sampGetChatInputText():match('^/.+%($')
+				if s then sampSetChatInputText(s..")"); sampSetChatInputCursor(s:len()) end
+			end
+
+			local args = sampGetChatInputText():match('^/.+%([%d%s]+%)')
+
+			if args and sampIsChatInputActive() then
+				local strEl = getStructElement(sampGetInputInfoPtr(), 0x8, 4)
+				local X = getStructElement(strEl, 0x8, 4) + 5
+				local Y = getStructElement(strEl, 0xC, 4) + 50
+				for a in args:gmatch('%d+') do
+					local rstr = sampGetChatInputText():gsub('%([%d%s]+%)', '{FFD000}'..a..'{008000}')
+					renderFontDrawText(font, rstr, X, Y, 0xFF008000)
+					renderFontDrawText(font, (sampIsPlayerConnected(a) and ' -> '..sampGetPlayerNickname(a) or '{FF5050} -> Не существует!'), X + renderGetFontDrawTextLength(font, rstr), Y, 0x80AFAFAF)
+					Y = Y + 13
+				end
+			end
 
 			if mainIni.settings.autoReconnect then
 				if sampGetChatString(99) == "Server closed the connection." or sampGetChatString(99) == "You are banned from this server." then
@@ -1028,7 +1050,7 @@ function drawFunctions()
 	imgui.TextQuestion(u8"Автоматически проверять обновления при входе в игру.")
 	imgui.SameLine()
 
-	if imgui.DrawToggleButtonRight('#13', 'Автообновление', ckAutoUpdate) then 
+	if imgui.DrawToggleButtonRight('#13', 'Автообновление скрипта', ckAutoUpdate) then 
 		mainIni.settings.autoUpdate = ckAutoUpdate.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
@@ -1707,6 +1729,17 @@ function addAdminLog(string)
 	logAdmin[#logAdmin+1] = string.format("[%s] %s", os.date("%H:%M:%S"), string)
 end
 
+function sampSetChatInputCursor(start, finish)
+    local finish = finish or start
+    local start, finish = tonumber(start), tonumber(finish)
+    local mem = require 'memory'
+    local chatInfoPtr = sampGetInputInfoPtr()
+    local chatBoxInfo = getStructElement(chatInfoPtr, 0x8, 4)
+    mem.setint8(chatBoxInfo + 0x11E, start)
+    mem.setint8(chatBoxInfo + 0x119, finish)
+    return true
+end
+
 function cleanStreamMemory(message)
 	local huy = callFunction(0x53C500, 2, 2, true, true)
 	local huy1 = callFunction(0x53C810, 1, 1, true)
@@ -1953,6 +1986,17 @@ function rpc_init()
 	end
 	
 	function sampev.onSendCommand(cmd)
+		-- Custom arguments
+		local args = cmd:match('^/.+%([%d%s]+%)')
+
+		if args then
+			for a in args:gmatch('%d+') do
+				sampSendChat( cmd:gsub('%([%d%s]+%)', a, 1) )
+			end
+
+			return false
+		end
+
 		local reId = string.match(cmd, "^%/re (%d+)")
 		if reId == nil then reId = string.match(cmd, "^%/sp (%d+)") end
 	
