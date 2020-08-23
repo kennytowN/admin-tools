@@ -1,4 +1,4 @@
-script_version('0.4.2')
+script_version('0.4.3')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -36,9 +36,6 @@ ffi.cdef [[
 
 local rcClip, rcOldClip = ffi.new('RECT'), ffi.new('RECT')
 -- Dual Monitor Fix
-
--- MapLimit 260
-local addrCmp, addrSet = 0x00577993, 0x005779FA
 
 -- GTA loading patch
 function patch()
@@ -157,15 +154,6 @@ function main()
 	-- Dual Monitor Fix
 	ffi.C.GetWindowRect(ffi.C.GetActiveWindow(), rcClip);
 	ffi.C.ClipCursor(rcClip);
-	  
-	-- mapLimit260
-	local limit = ffi.new("float[1]", 260.0)
-
-	origCmp = readMemory(addrCmp, 4, true)
-	origSet = readMemory(addrSet, 4, true)
-
-	writeMemory(addrCmp, 4, tonumber(ffi.cast("intptr_t", limit)), true)
-	writeMemory(addrSet, 4, representFloatAsInt(limit[0]), true)
 
 	sampRegisterChatCommand("rec", function(arg)
 		time = tonumber(arg)
@@ -429,14 +417,6 @@ function main()
 	end
 end
 
--- Map limit 260
-function onExitThread()
-	if origCmp and origSet then
-		writeMemory(addrCmp, 4, origCmp, true)
-		writeMemory(addrSet, 4, origSet, true)
-	end
-end
-
 -- Search: SA:MP Fixes
 function onWindowMessage(msg, wparam, lparam)
 	if msg == wm.WM_KILLFOCUS then
@@ -655,7 +635,6 @@ function imgui_init()
     }
 
 	function imgui.OnDrawFrame()
-		--if wInfo.func.v then drawFunctions() end
 		if wInfo.main.v then drawMain() end
 		if ckSpectateUI.v and wInfo.spectatemenu.v and sampIsPlayerConnected(recInfo.id) and sampGetPlayerScore(recInfo.id) ~= 0 then drawSpectateMenu() end
 	end
@@ -882,9 +861,8 @@ function drawMain()
     local ScreenX, ScreenY = getScreenResolution()
 
     imgui.SetNextWindowPos(imgui.ImVec2(ScreenX / 2 - 300, ScreenY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-    imgui.Begin(u8'Mailen Tools', wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
+    imgui.Begin(u8'Admin Tools', wInfo.main, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize)
 
-	--imgui.BeginChild('###', imgui.ImVec2(685, 45), false)
 	if imgui.InvisibleTitleButton(fa.ICON_FA_TERMINAL ..  u8' Функции', 165, 25) then
 		wInfo.func.v = true
 		wInfo.teleport.v = false
@@ -923,9 +901,6 @@ function drawMain()
 	end
 
 	imgui.Text('\n')
-	--imgui.EndChild()
-
-	--imgui.SameLine()
 
 	imgui.BeginChild('##', imgui.ImVec2(625, 300), false)
 		if wInfo.func.v then drawFunctions() end
@@ -975,8 +950,6 @@ function drawFunctions()
 	imgui.Subtitle('General', 30)
 	imgui.Text(u8"\n")
 
-	--imgui.PushItemWidth(50)
-
 	imgui.TextQuestion(u8"Автоматически вводит пароль при входе на сервере")
 	imgui.SameLine()
 
@@ -997,15 +970,15 @@ function drawFunctions()
 	imgui.TextQuestion(u8"Автоматически вводит /aduty при успешной авторизации в аккаунт")
 	imgui.SameLine()
 
-	if imgui.DrawToggleButtonRight('#_2', 'Авто /aduty', ckAutoAduty) then
+	if imgui.DrawToggleButtonRight('#_2', 'Быстрая авторизация', ckAutoAduty) then
 		mainIni.settings.autoAduty = ckAutoAduty.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
-	imgui.TextQuestion(u8"Корректно определяет координату Z когда Вы ставите метку на карте")
+	imgui.TextQuestion(u8"Корректно определяет координату Z, когда вы ставите метку на карте")
 	imgui.SameLine()
 
-	if imgui.DrawToggleButtonRight('#_3', 'Fix SetPlayerPosFindZ', ckFixFindZ) then
+	if imgui.DrawToggleButtonRight('#_3', 'Телепортация на землю', ckFixFindZ) then
 		mainIni.settings.fixFindZ = ckFixFindZ.v
 		inicfg.save(mainIni, "admintools.ini")
 	end
@@ -1115,8 +1088,6 @@ function drawFunctions()
 		inicfg.save(mainIni, "admintools.ini")
 	end
 	imgui.PopItemWidth()
-
-	--imgui.Text(u8"\n")
 
 	imgui.TextColoredRGB("Активация: {008080}Right Shift")
 
@@ -1826,10 +1797,12 @@ function rpc_init()
 
 	function sampev.onSetPlayerPos(position)
 		if scriptInfo.setMarker then 
-			scriptInfo.setMarker = false 
+			setCharCoordinates(PLAYER_PED, markerX, markerY, markerZ)
 
-			local _, x, y, z = getTargetBlipCoordinatesFixed()
-			setCharCoordinates(PLAYER_PED, x, y, z)
+			scriptInfo.setMarker = false
+			markerX = nil
+			markerY = nil
+			markerZ = nil
 
 			return false
 		end
@@ -1837,6 +1810,11 @@ function rpc_init()
 
 	function sampev.onSendMapMarker(position)
 		if scriptInfo.aduty and ckFixFindZ.v then 
+			local _, x, y, z = getTargetBlipCoordinatesFixed()
+
+			markerX = x
+			markerY = y
+			markerZ = z
 			scriptInfo.setMarker = true 
 		end
 	end
