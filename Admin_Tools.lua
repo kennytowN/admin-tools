@@ -1,4 +1,4 @@
-script_version('0.4.4')
+script_version('0.4.4-R2')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -1990,16 +1990,19 @@ function rpc_init()
 		local args = cmd:match('^/.+%([%d%s]+%)')
 
 		if args then
-			for a in args:gmatch('%d+') do
-				sampSendChat( cmd:gsub('%([%d%s]+%)', a, 1) )
-			end
+			lua_thread.create(function()
+				for a in args:gmatch('%d+') do
+					sampSendChat( cmd:gsub('%([%d%s]+%)', a, 1) )
+					wait(500)
+				end
+			end)
 
 			return false
 		end
 
 		local reId = string.match(cmd, "^%/re (%d+)")
 		if reId == nil then reId = string.match(cmd, "^%/sp (%d+)") end
-	
+
 		if reId ~= nil then
 			recInfo.loading = true
 			recInfo.id = tonumber(reId)
