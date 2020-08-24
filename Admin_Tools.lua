@@ -1,4 +1,4 @@
-script_version('0.4.4-R2')
+script_version('0.4.5')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -1167,7 +1167,10 @@ function drawFunctions()
 		ckReconAlert = imgui.ImBool(mainIni.settings.reconAlert)
 		ckAutoAduty = imgui.ImBool(mainIni.settings.autoAduty)
 
-		nameTagOff()
+		if activeWH then
+			nameTagOff()
+		end
+
 		inicfg.save(mainIni, "admintools.ini")
 	end
 
@@ -1916,7 +1919,9 @@ function rpc_init()
 				setCharProofs(playerPed, false, false, false, false, false)
 				writeMemory(0x96916E, 1, 0, false)
 
-				nameTagOff()
+				if activeWH then
+					nameTagOff()
+				end
 			elseif color == -68395776 then
 				scriptInfo.aduty = true 
 				if addTimeToStatsId == nil then addTimeToStatsId = lua_thread.create(addTimeToStats) end
