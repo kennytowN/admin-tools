@@ -1,4 +1,4 @@
-script_version('0.4.5')
+script_version('0.4.5-patch1')
 script_properties("work-in-pause")
 
 local memory 				= require 'memory'
@@ -217,11 +217,13 @@ function main()
 				end
 			end
 
-			if mainIni.settings.autoReconnect then
-				if sampGetChatString(99) == "Server closed the connection." or sampGetChatString(99) == "You are banned from this server." then
+			if sampGetChatString(99) == "Server closed the connection." or sampGetChatString(99) == "You are banned from this server." then
+				if mainIni.settings.autoReconnect then
 					time = nil
 					res = true
 				end
+
+				scriptInfo.airbreak = false
 			end
 
 			if isKeyJustPressed(key.VK_F9) then -- Activate:: Main window
